@@ -1,0 +1,17 @@
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Notebook and editor artifacts
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# Local environment and OS files
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
