@@ -1,0 +1,11 @@
+{
+  "generator": "python-holidays",
+  "holidays_version": "0.107",
+  "country": "BR",
+  "scope": "national holidays provided by the library",
+  "years": [
+    2016,
+    2017,
+    2018
+  ]
+}
