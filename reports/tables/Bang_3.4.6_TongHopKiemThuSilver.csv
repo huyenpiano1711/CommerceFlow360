@@ -1,0 +1,8 @@
+﻿nhom,PASS,WARN,tong
+Khóa grain nhiều cột,3,0,3
+Tùy chỉnh (nghiệp vụ / đối soát),5,3,8
+accepted_values,7,0,7
+not_null,38,2,40
+relationships,7,0,7
+unique,7,0,7
+Tổng,67,5,72

@@ -1,0 +1,21 @@
+﻿bang,quy_tac,so_ban_ghi
+silver_orders,Đơn delivered nhưng thiếu ngày khách nhận,8
+silver_orders,Ngày giao vận chuyển trước thời điểm đặt (gắn cờ),166
+silver_orders,Ngày khách nhận trước ngày giao vận chuyển (gắn cờ),23
+silver_orders,"Đơn chưa có ngày khách nhận (giữ NULL, không xóa)",2965
+silver_order_payments,Số kỳ trả góp = 0 đưa về 1,2
+silver_order_payments,"Dòng thanh toán giá trị 0 (giữ nguyên, gắn cờ)",9
+silver_order_reviews,Đơn có nhiều hơn 1 đánh giá,547
+silver_order_reviews,review_id dùng cho nhiều đơn,789
+silver_order_reviews,Mốc thời gian sai định dạng được sửa,1
+silver_order_reviews,Bình luận chỉ có khoảng trắng chuyển thành NULL,11
+silver_products,Danh mục NULL gán sem_categoria,610
+silver_products,Sản phẩm thuộc danh mục được bổ sung bản dịch,13
+silver_products,Kích thước/khối lượng thiếu hoặc <= 0 (gán NULL),6
+silver_sellers,Tên thành phố được chuẩn hóa,32
+silver_sellers,"Tên thành phố không hợp lệ (số, email) chuyển NULL",2
+silver_customers,Tiền tố ZIP được khôi phục số 0 đầu,23995
+silver_geolocation,Dòng Bronze được gộp (1.000.163 -> 1 dòng/ZIP),981148
+silver_geolocation,Điểm tọa độ ngoài lãnh thổ Brazil bị loại khỏi trung vị,42
+silver_geolocation,ZIP không còn tọa độ hợp lệ (lat/lng NULL),5
+silver_geolocation,ZIP có nhiều bang ở nguồn (chọn bang phổ biến nhất),8
