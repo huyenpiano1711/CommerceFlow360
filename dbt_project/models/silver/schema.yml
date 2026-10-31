@@ -1,0 +1,243 @@
+version: 2
+
+# =============================================================================
+# Kiểm thử tầng Silver - Task C03 (Duy Lê)
+# Nhóm kiểm thử: (1) khóa/grain: unique, not_null, unique_combination
+#                (2) miền giá trị: accepted_values
+#                (3) toàn vẹn tham chiếu: relationships
+#                (4) quy tắc nghiệp vụ: test tùy chỉnh trong dbt_project/tests/test_silver_*.sql
+# severity: warn  = bất thường có thật trong dữ liệu nguồn, đã được gắn cờ ở Silver,
+#                   ghi nhận để báo cáo chứ không chặn pipeline.
+# =============================================================================
+
+models:
+  - name: silver_orders
+    description: "Đơn hàng đã làm sạch. Grain: 1 dòng / order_id."
+    columns:
+      - name: order_id
+        description: "Mã đơn hàng (md5, chữ thường)."
+        data_tests: [unique, not_null]
+      - name: customer_id
+        description: "Mã khách hàng theo đơn - liên kết silver_customers."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_customers')
+                field: customer_id
+      - name: order_status
+        description: "Trạng thái đơn đã chuẩn hóa chữ thường."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['delivered', 'shipped', 'canceled', 'unavailable', 'invoiced', 'processing', 'created', 'approved']
+      - name: order_purchase_timestamp
+        description: "Thời điểm khách đặt hàng (TIMESTAMP)."
+        data_tests: [not_null]
+      - name: order_purchase_date
+        description: "Ngày đặt hàng (DATE) - khóa nối dim_date."
+        data_tests: [not_null]
+      - name: order_estimated_delivery_date
+        description: "Ngày giao dự kiến."
+        data_tests: [not_null]
+      - name: flag_delivered_missing_date
+        description: "TRUE nếu trạng thái delivered nhưng thiếu ngày khách nhận hàng."
+      - name: flag_carrier_before_purchase
+        description: "TRUE nếu ngày giao cho đơn vị vận chuyển sớm hơn thời điểm đặt hàng (bất thường nguồn)."
+      - name: flag_customer_before_carrier
+        description: "TRUE nếu ngày khách nhận sớm hơn ngày giao cho đơn vị vận chuyển (bất thường nguồn)."
+
+  - name: silver_order_items
+    description: "Dòng hàng trong đơn. Grain: 1 dòng / (order_id, order_item_id)."
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: ['order_id', 'order_item_id']
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_orders')
+                field: order_id
+      - name: order_item_id
+        data_tests: [not_null]
+      - name: product_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_products')
+                field: product_id
+      - name: seller_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_sellers')
+                field: seller_id
+      - name: price
+        description: "Giá bán dòng hàng (DECIMAL 12,2), không gồm phí vận chuyển."
+        data_tests: [not_null]
+      - name: freight_value
+        description: "Phí vận chuyển phân bổ cho dòng hàng (DECIMAL 12,2)."
+        data_tests: [not_null]
+      - name: item_total_value
+        description: "price + freight_value."
+
+  - name: silver_order_payments
+    description: "Dòng thanh toán. Grain: 1 dòng / (order_id, payment_sequential)."
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: ['order_id', 'payment_sequential']
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_orders')
+                field: order_id
+      - name: payment_sequential
+        data_tests: [not_null]
+      - name: payment_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['credit_card', 'boleto', 'voucher', 'debit_card', 'not_defined']
+      - name: payment_installments
+        description: "Số kỳ trả góp (>= 1; giá trị 0 ở nguồn được đưa về 1)."
+        data_tests: [not_null]
+      - name: payment_value
+        data_tests: [not_null]
+      - name: flag_installments_imputed
+        description: "TRUE nếu số kỳ trả góp nguồn < 1 và đã được đưa về 1."
+
+  - name: silver_order_reviews
+    description: "Đánh giá đơn hàng. Grain: 1 dòng / (review_id, order_id)."
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: ['review_id', 'order_id']
+    columns:
+      - name: review_id
+        data_tests: [not_null]
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_orders')
+                field: order_id
+      - name: review_score
+        description: "Điểm đánh giá 1-5."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
+      - name: review_creation_date
+        data_tests: [not_null]
+      - name: review_answer_timestamp
+        data_tests: [not_null]
+      - name: is_latest_review
+        description: "TRUE cho đánh giá mới nhất của mỗi đơn - dùng khi Gold cần 1 đánh giá / đơn."
+
+  - name: silver_customers
+    description: "Khách hàng theo đơn. Grain: 1 dòng / customer_id."
+    columns:
+      - name: customer_id
+        data_tests: [unique, not_null]
+      - name: customer_unique_id
+        description: "Định danh người mua qua nhiều đơn - dùng cho dim_customer và phân tích mua lại."
+        data_tests: [not_null]
+      - name: customer_zip_code_prefix
+        description: "Tiền tố ZIP 5 ký tự (đã khôi phục số 0 đầu)."
+        data_tests: [not_null]
+      - name: customer_state
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: &uf ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']
+
+  - name: silver_sellers
+    description: "Người bán. Grain: 1 dòng / seller_id."
+    columns:
+      - name: seller_id
+        data_tests: [unique, not_null]
+      - name: seller_zip_code_prefix
+        data_tests: [not_null]
+      - name: seller_state
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: *uf
+      - name: seller_city
+        description: "Tên thành phố đã chuẩn hóa; NULL nếu giá trị nguồn không phải tên thành phố."
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+
+  - name: silver_products
+    description: "Sản phẩm. Grain: 1 dòng / product_id."
+    columns:
+      - name: product_id
+        data_tests: [unique, not_null]
+      - name: product_category_name
+        description: "Danh mục (tiếng Bồ Đào Nha); NULL ở nguồn -> 'sem_categoria'."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_product_category_name_translation')
+                field: product_category_name
+      - name: product_category_name_english
+        description: "Tên danh mục tiếng Anh (đã bổ sung bản dịch thiếu)."
+        data_tests: [not_null]
+
+  - name: silver_product_category_name_translation
+    description: "Bảng dịch danh mục. Grain: 1 dòng / product_category_name."
+    columns:
+      - name: product_category_name
+        data_tests: [unique, not_null]
+      - name: product_category_name_english
+        data_tests: [not_null]
+      - name: translation_source
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['olist', 'manual_supplement', 'placeholder']
+
+  - name: silver_geolocation
+    description: "Tọa độ đại diện theo tiền tố ZIP. Grain: 1 dòng / geolocation_zip_code_prefix."
+    columns:
+      - name: geolocation_zip_code_prefix
+        data_tests: [unique, not_null]
+      - name: geolocation_state
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: *uf
+      - name: geolocation_lat
+        description: "Trung vị vĩ độ của các điểm nằm trong lãnh thổ Brazil; NULL nếu ZIP không có điểm hợp lệ."
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+
+  - name: silver_holidays
+    description: "Ngày lễ quốc gia Brazil 2016-2018. Grain: 1 dòng / holiday_date."
+    columns:
+      - name: holiday_date
+        data_tests: [unique, not_null]
+      - name: holiday_name
+        data_tests: [not_null]
