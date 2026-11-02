@@ -5,5 +5,6 @@ select
     round(100.0 * count(*) / sum(count(*)) over (), 2)   as pct_customers,
     round(avg(total_spend), 2)                           as avg_total_spend
 from mart_customer
+where has_valid_order  -- [Sửa logic] mẫu số = khách có >= 1 đơn hợp lệ
 group by is_repeat_customer
 order by is_repeat_customer desc;

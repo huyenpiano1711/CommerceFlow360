@@ -51,6 +51,13 @@ models:
       - name: order_count
         data_tests: [not_null]
       - name: total_spend
+        description: "Tổng payment_value của các đơn hợp lệ (fact_orders.is_valid_order)."
+        data_tests: [not_null]
+      - name: has_valid_order
+        description: "TRUE nếu khách có ít nhất 1 đơn hợp lệ. Lọc cờ này khi tính tỷ lệ mua lại, recency, phân khúc."
+        data_tests: [not_null]
+      - name: is_repeat_customer
+        description: "TRUE nếu khách có >= 2 đơn hợp lệ (theo customer_unique_id)."
         data_tests: [not_null]
       - name: days_since_last_order
         description: "Số ngày từ last_order_date đến ngày đặt hàng lớn nhất toàn dữ liệu (snapshot_date); >= 0 theo cách tính date_diff, kiểm tra ở tests/test_mart_reconciliation.sql."

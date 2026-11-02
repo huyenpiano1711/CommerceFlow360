@@ -5,6 +5,7 @@
 -- thời gian (tháng/quý/cờ ngày lễ) ở cùng một dòng để BI/Phân tích tự chọn chiều tổng hợp
 -- (theo tháng, danh mục, bang, người bán...) mà không phải nối lại fact/dim.
 -- is_valid_sale: loại trừ đơn hủy/không còn hàng khi tính doanh thu, theo quy ước Olist.
+-- [Sửa logic] Lấy trực tiếp cờ is_valid_order của fact_orders để 3 mart dùng chung một định nghĩa.
 with items as (
     select
         order_id,
@@ -22,7 +23,7 @@ with items as (
 ),
 
 orders as (
-    select order_id, order_status
+    select order_id, order_status, is_valid_order
     from {{ ref('fact_orders') }}
 )
 
@@ -41,8 +42,7 @@ select
     seller.seller_id,
     seller_geo.state                                 as seller_state,
     orders.order_status,
-    (orders.order_status not in ('canceled', 'unavailable'))
-                                                      as is_valid_sale,
+    orders.is_valid_order                            as is_valid_sale,
     items.item_price                                 as revenue,
     items.freight_value,
     items.item_total_value,

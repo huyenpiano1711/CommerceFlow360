@@ -10,5 +10,6 @@ select
     count(*)                                     as customer_count,
     round(100.0 * count(*) / sum(count(*)) over (), 2) as pct_customers
 from mart_customer
+where has_valid_order  -- [Sửa logic] khách không có đơn hợp lệ có recency NULL, trước đây rơi vào nhóm '> 365 ngay'
 group by 1
 order by min(days_since_last_order);

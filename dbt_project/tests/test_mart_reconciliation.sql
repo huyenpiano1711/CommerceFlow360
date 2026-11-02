@@ -20,16 +20,35 @@ with reconciliations as (
     union all
 
     select
-        'mart_customer.total_spend = fact_payments.payment_value',
-        cast((select sum(payment_value) from {{ ref('fact_payments') }}) as decimal(18, 2)),
+        -- [Sửa logic] total_spend chỉ gồm thanh toán của đơn hợp lệ (is_valid_order)
+        'mart_customer.total_spend = fact_payments.payment_value (don hop le)',
+        cast((select sum(p.payment_value) from {{ ref('fact_payments') }} p
+              join {{ ref('fact_orders') }} o on o.order_id = p.order_id
+              where o.is_valid_order) as decimal(18, 2)),
         cast((select sum(total_spend) from {{ ref('mart_customer') }}) as decimal(18, 2))
 
     union all
 
     select
-        'mart_customer: tong order_count = fact_orders co customer_key',
-        cast((select count(*) from {{ ref('fact_orders') }} where customer_key is not null) as decimal(18, 2)),
+        'mart_customer: tong order_count = fact_orders hop le co customer_key',
+        cast((select count(*) from {{ ref('fact_orders') }} where customer_key is not null and is_valid_order) as decimal(18, 2)),
         cast((select sum(order_count) from {{ ref('mart_customer') }}) as decimal(18, 2))
+
+    union all
+
+    select
+        'mart_customer: tong order_count_all_status = fact_orders co customer_key',
+        cast((select count(*) from {{ ref('fact_orders') }} where customer_key is not null) as decimal(18, 2)),
+        cast((select sum(order_count_all_status) from {{ ref('mart_customer') }}) as decimal(18, 2))
+
+    union all
+
+    select
+        'mart_sales: doanh thu don hop le = fact_order_items x fact_orders.is_valid_order',
+        cast((select sum(i.item_price) from {{ ref('fact_order_items') }} i
+              join {{ ref('fact_orders') }} o on o.order_id = i.order_id
+              where o.is_valid_order) as decimal(18, 2)),
+        cast((select sum(revenue) from {{ ref('mart_sales') }} where is_valid_sale) as decimal(18, 2))
 
 )
 

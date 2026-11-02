@@ -5,10 +5,17 @@
 -- nhất, cờ khách mua lại. "Thời gian từ lần mua gần nhất" không có mốc "hôm nay" hợp lý với
 -- dữ liệu lịch sử Olist (2016-2018) nên dùng ngày đặt hàng lớn nhất toàn dữ liệu làm mốc so sánh
 -- (snapshot_date), tương đương kỹ thuật phân tích RFM trên dữ liệu lịch sử.
+--
+-- [Sửa logic] Thống nhất KPI với mart_sales: số đơn, tổng chi tiêu, ngày mua đầu/cuối và cờ mua lại
+-- chỉ tính trên ĐƠN HỢP LỆ (fact_orders.is_valid_order, loại canceled/unavailable). Trước đây mart này
+-- đếm cả đơn hủy nên khách chỉ có 1 đơn thật + 1 đơn hủy bị tính là "khách mua lại".
+-- Khách không có đơn hợp lệ nào vẫn giữ trong mart (has_valid_order = false) để đối soát với dim_customer,
+-- nhưng phải lọc has_valid_order khi tính tỷ lệ mua lại, recency, phân khúc chi tiêu.
 with orders_with_date as (
     select
         orders.customer_key,
         orders.order_id,
+        orders.is_valid_order,
         order_date.full_date as order_purchase_date
     from {{ ref('fact_orders') }} as orders
     left join {{ ref('dim_date') }} as order_date
@@ -19,20 +26,24 @@ with orders_with_date as (
 customer_orders as (
     select
         customer_key,
-        count(distinct order_id)      as order_count,
-        min(order_purchase_date)      as first_order_date,
-        max(order_purchase_date)      as last_order_date
+        count(distinct order_id)                                    as order_count_all_status,
+        count(distinct order_id) filter (where is_valid_order)      as order_count,
+        min(order_purchase_date) filter (where is_valid_order)      as first_order_date,
+        max(order_purchase_date) filter (where is_valid_order)      as last_order_date
     from orders_with_date
     group by customer_key
 ),
 
 customer_spend as (
     select
-        customer_key,
-        sum(payment_value) as total_spend
-    from {{ ref('fact_payments') }}
-    where customer_key is not null
-    group by customer_key
+        payments.customer_key,
+        sum(payments.payment_value) as total_spend
+    from {{ ref('fact_payments') }} as payments
+    join {{ ref('fact_orders') }} as orders
+        on payments.order_id = orders.order_id
+    where payments.customer_key is not null
+      and orders.is_valid_order
+    group by payments.customer_key
 ),
 
 snapshot as (
@@ -43,12 +54,14 @@ snapshot as (
 select
     customer.customer_key,
     customer.customer_unique_id,
-    coalesce(orders.order_count, 0)              as order_count,
+    coalesce(orders.order_count, 0)               as order_count,
+    coalesce(orders.order_count_all_status, 0)    as order_count_all_status,
     coalesce(spend.total_spend, 0)                as total_spend,
     orders.first_order_date,
     orders.last_order_date,
     date_diff('day', orders.last_order_date, snapshot.snapshot_date)
                                                    as days_since_last_order,
+    coalesce(orders.order_count, 0) > 0           as has_valid_order,
     coalesce(orders.order_count, 0) > 1           as is_repeat_customer
 
 from {{ ref('dim_customer') }} as customer
