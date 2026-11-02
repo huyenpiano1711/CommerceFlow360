@@ -11,7 +11,7 @@ Tài liệu này xác định grain của bốn fact và các dimension dùng ch
 | `fact_orders` | Một đơn hàng Olist | `order_id` | `order_count`, `delivery_days`, `days_late`; `is_delivered_late` là chỉ báo |
 | `fact_order_items` | Một dòng sản phẩm trong một đơn hàng | `(order_id, order_item_id)` | `item_price`, `freight_value`, `item_count` |
 | `fact_payments` | Một dòng thanh toán của một đơn hàng | `(order_id, payment_sequential)` | `payment_value` |
-| `fact_reviews` | Một review Olist | `review_id` | `review_score`; `has_comment` là chỉ báo |
+| `fact_reviews` | Một review Olist | `(review_id, order_id)` | `review_score`; `has_comment` là chỉ báo |
 
 `order_id` được giữ trong các fact chi tiết để truy vết về đơn hàng. Đây không phải lý do để nối trực tiếp các fact với nhau: một đơn hàng có thể có nhiều dòng sản phẩm, nhiều dòng thanh toán và nhiều review.
 

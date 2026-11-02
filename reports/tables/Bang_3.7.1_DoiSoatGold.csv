@@ -1,0 +1,5 @@
+﻿metric,source_value,silver_value,gold_value,source_to_silver_difference,silver_to_gold_difference
+freight_value,2251909.54,2251909.54,2251909.54,0.0,0.0
+item_revenue,13591643.7,13591643.7,13591643.7,0.0,0.0
+order_count,99441.0,99441.0,99441.0,0.0,0.0
+payment_value,16008872.12,16008872.12,16008872.12,0.0,0.0
