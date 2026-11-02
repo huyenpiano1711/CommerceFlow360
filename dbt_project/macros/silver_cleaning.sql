@@ -1,7 +1,7 @@
 {#
   Macro dùng chung cho tầng Silver - CommerceFlow 360 (Task C02, Duy Lê).
-  Mọi macro đều nhận cột ở dạng bất kỳ (VARCHAR, BIGINT, DOUBLE...) để Silver chạy
-  đúng dù notebook Bronze nạp CSV giữ nguyên chuỗi hay để Pandas/DuckDB tự suy kiểu.
+  Bronze lưu mọi cột dạng VARCHAR (all_varchar); macro vẫn cast về varchar trước khi xử lý
+  nên dùng được cho cả cột đã có kiểu khác.
 #}
 
 {# Chuỗi: bỏ khoảng trắng thừa ở hai đầu, gộp nhiều khoảng trắng/xuống dòng thành 1, chuỗi rỗng -> NULL #}
@@ -24,7 +24,7 @@
     upper({{ clean_text(col) }})
 {%- endmacro %}
 
-{# Tiền tố mã ZIP: luôn là chuỗi 5 chữ số, khôi phục số 0 đầu bị mất khi Bronze suy kiểu số #}
+{# Tiền tố mã ZIP: luôn là chuỗi 5 chữ số, khôi phục số 0 đầu nếu nguồn bị mất #}
 {% macro clean_zip(col) -%}
     lpad(cast(try_cast({{ clean_text(col) }} as integer) as varchar), 5, '0')
 {%- endmacro %}
@@ -73,9 +73,8 @@
 {%- endmacro %}
 
 {#
-  Biểu thức ORDER BY dùng khi khử trùng theo grain: ưu tiên bản ghi nạp gần nhất nếu
-  bảng Bronze có cột thời điểm nạp (tên lấy từ var bronze_load_ts_columns),
-  nếu không có thì thứ tự không quan trọng (các bản trùng giống nhau).
+  Biểu thức ORDER BY dùng khi khử trùng theo grain: ưu tiên bản ghi nạp gần nhất theo cột
+  thời điểm nạp (var bronze_load_ts_columns); bảng không có cột này thì thứ tự không quan trọng.
 #}
 {% macro bronze_latest_first(relation) -%}
     {%- if execute -%}

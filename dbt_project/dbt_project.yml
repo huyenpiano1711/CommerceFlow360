@@ -1,7 +1,7 @@
 # =============================================================================
 # CommerceFlow 360 - dbt project (dbt Core + dbt-duckdb)
 # Task C01 - Cài đặt dbt | Người phụ trách: Duy Lê
-# Luồng: bronze_* (nạp bởi 02_Bronze_Ingestion) -> silver_* -> dim_/fact_ -> mart_*
+# Luồng: bronze_* (nạp bởi src/ingestion/bronze_ingestion.py) -> silver_* -> dim_/fact_ -> mart_*
 # =============================================================================
 name: commerceflow360
 version: "1.0.0"
@@ -12,18 +12,14 @@ profile: commerceflow360
 model-paths: ["models"]
 macro-paths: ["macros"]
 test-paths: ["tests"]
-seed-paths: ["seeds"]
-analysis-paths: ["analyses"]
-snapshot-paths: ["snapshots"]
 
 target-path: "target"
 clean-targets: ["target", "dbt_packages"]
 
 vars:
-  # Tên cột thời điểm nạp mà notebook Bronze có thể đã thêm vào bảng bronze_*.
-  # Model Silver dùng cột đầu tiên tìm thấy để giữ bản ghi nạp mới nhất khi khử trùng.
-  # Nếu Bronze dùng tên khác, chỉ cần thêm tên đó vào danh sách này.
-  bronze_load_ts_columns: ["_ingested_at", "ingested_at", "_loaded_at", "loaded_at", "load_timestamp", "ingestion_timestamp", "_ingestion_ts"]
+  # Cột thời điểm nạp do src/ingestion/bronze_ingestion.py thêm vào mọi bảng bronze_*.
+  # Model Silver dùng cột này để ưu tiên bản ghi nạp mới nhất khi khử trùng theo grain.
+  bronze_load_ts_columns: ["_ingested_at"]
   # Khung tọa độ hợp lệ của lãnh thổ Brazil (dùng khi gộp geolocation).
   brazil_lat_min: -33.75
   brazil_lat_max: 5.28

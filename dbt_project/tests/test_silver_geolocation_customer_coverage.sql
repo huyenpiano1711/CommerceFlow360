@@ -1,6 +1,7 @@
 -- test_silver_geolocation_customer_coverage | Task C03 (Duy Lê) | severity = warn
 -- Liệt kê tiền tố ZIP của khách hàng/người bán không có trong silver_geolocation.
--- Gold (dim_geography) cần xử lý các ZIP này như "không xác định" thay vì làm rơi đơn hàng.
+-- Đã xử lý ở Gold: dim_geography lấy city/state từ chính địa chỉ khách hàng/người bán
+-- (location_source = 'customer_seller_address'), nên test này chỉ để ghi nhận số lượng trong báo cáo.
 {{ config(severity='warn') }}
 select 'customer' as doi_tuong, customer_zip_code_prefix as zip_code_prefix
 from {{ ref('silver_customers') }}

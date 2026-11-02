@@ -1,73 +1,71 @@
 ﻿test,nhom,trang_thai,so_dong_vi_pham,tang,thoi_diem_chay
-unique_combination_silver_order_items_order_id__order_item_id,Khóa grain nhiều cột,PASS,0,silver,2026-10-31T17:20:58.549590Z
-unique_combination_silver_order_payments_order_id__payment_sequential,Khóa grain nhiều cột,PASS,0,silver,2026-10-31T17:20:58.549590Z
-unique_combination_silver_order_reviews_review_id__order_id,Khóa grain nhiều cột,PASS,0,silver,2026-10-31T17:20:58.549590Z
-test_silver_bronze_row_reconciliation,Tùy chỉnh (nghiệp vụ / đối soát),PASS,0,silver,2026-10-31T17:20:58.549590Z
-test_silver_carrier_after_purchase,Tùy chỉnh (nghiệp vụ / đối soát),WARN,166,silver,2026-10-31T17:20:58.549590Z
-test_silver_delivery_dates,Tùy chỉnh (nghiệp vụ / đối soát),PASS,0,silver,2026-10-31T17:20:58.549590Z
-test_silver_geolocation_customer_coverage,Tùy chỉnh (nghiệp vụ / đối soát),WARN,285,silver,2026-10-31T17:20:58.549590Z
-test_silver_non_negative_amounts,Tùy chỉnh (nghiệp vụ / đối soát),PASS,0,silver,2026-10-31T17:20:58.549590Z
-test_silver_order_sales_reconciliation,Tùy chỉnh (nghiệp vụ / đối soát),PASS,0,silver,2026-10-31T17:20:58.549590Z
-test_silver_review_after_purchase,Tùy chỉnh (nghiệp vụ / đối soát),WARN,64,silver,2026-10-31T17:20:58.549590Z
-test_silver_review_score_range,Tùy chỉnh (nghiệp vụ / đối soát),PASS,0,silver,2026-10-31T17:20:58.549590Z
-accepted_values_silver_customers_customer_state__AC__AL__AM__AP__BA__CE__DF__ES__GO__MA__MG__MS__MT__PA__PB__PE__PI__PR__RJ__RN__RO__RR__RS__SC__SE__SP__TO,accepted_values,PASS,0,silver,2026-10-31T17:20:58.549590Z
-accepted_values_silver_geolocation_geolocation_state__AC__AL__AM__AP__BA__CE__DF__ES__GO__MA__MG__MS__MT__PA__PB__PE__PI__PR__RJ__RN__RO__RR__RS__SC__SE__SP__TO,accepted_values,PASS,0,silver,2026-10-31T17:20:58.549590Z
-accepted_values_silver_order_payments_payment_type__credit_card__boleto__voucher__debit_card__not_defined,accepted_values,PASS,0,silver,2026-10-31T17:20:58.549590Z
-accepted_values_silver_order_reviews_review_score__False__1__2__3__4__5,accepted_values,PASS,0,silver,2026-10-31T17:20:58.549590Z
-accepted_values_silver_orders_order_status__delivered__shipped__canceled__unavailable__invoiced__processing__created__approved,accepted_values,PASS,0,silver,2026-10-31T17:20:58.549590Z
-accepted_values_silver_product_category_name_translation_translation_source__olist__manual_supplement__placeholder,accepted_values,PASS,0,silver,2026-10-31T17:20:58.549590Z
-accepted_values_silver_sellers_seller_state__AC__AL__AM__AP__BA__CE__DF__ES__GO__MA__MG__MS__MT__PA__PB__PE__PI__PR__RJ__RN__RO__RR__RS__SC__SE__SP__TO,accepted_values,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_customers_customer_id,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_customers_customer_state,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_customers_customer_unique_id,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_customers_customer_zip_code_prefix,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_geolocation_geolocation_lat,not_null,WARN,5,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_geolocation_geolocation_state,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_geolocation_geolocation_zip_code_prefix,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_holidays_holiday_date,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_holidays_holiday_name,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_items_freight_value,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_items_order_id,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_items_order_item_id,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_items_price,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_items_product_id,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_items_seller_id,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_payments_order_id,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_payments_payment_installments,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_payments_payment_sequential,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_payments_payment_type,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_payments_payment_value,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_reviews_order_id,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_reviews_review_answer_timestamp,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_reviews_review_creation_date,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_reviews_review_id,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_order_reviews_review_score,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_orders_customer_id,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_orders_order_estimated_delivery_date,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_orders_order_id,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_orders_order_purchase_date,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_orders_order_purchase_timestamp,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_orders_order_status,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_product_category_name_translation_product_category_name,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_product_category_name_translation_product_category_name_english,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_products_product_category_name,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_products_product_category_name_english,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_products_product_id,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_sellers_seller_city,not_null,WARN,2,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_sellers_seller_id,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_sellers_seller_state,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-not_null_silver_sellers_seller_zip_code_prefix,not_null,PASS,0,silver,2026-10-31T17:20:58.549590Z
-relationships_silver_order_items_order_id__order_id__ref_silver_orders_,relationships,PASS,0,silver,2026-10-31T17:20:58.549590Z
-relationships_silver_order_items_product_id__product_id__ref_silver_products_,relationships,PASS,0,silver,2026-10-31T17:20:58.549590Z
-relationships_silver_order_items_seller_id__seller_id__ref_silver_sellers_,relationships,PASS,0,silver,2026-10-31T17:20:58.549590Z
-relationships_silver_order_payments_order_id__order_id__ref_silver_orders_,relationships,PASS,0,silver,2026-10-31T17:20:58.549590Z
-relationships_silver_order_reviews_order_id__order_id__ref_silver_orders_,relationships,PASS,0,silver,2026-10-31T17:20:58.549590Z
-relationships_silver_orders_customer_id__customer_id__ref_silver_customers_,relationships,PASS,0,silver,2026-10-31T17:20:58.549590Z
-relationships_silver_products_product_category_name__product_category_name__ref_silver_product_category_name_translation_,relationships,PASS,0,silver,2026-10-31T17:20:58.549590Z
-unique_silver_customers_customer_id,unique,PASS,0,silver,2026-10-31T17:20:58.549590Z
-unique_silver_geolocation_geolocation_zip_code_prefix,unique,PASS,0,silver,2026-10-31T17:20:58.549590Z
-unique_silver_holidays_holiday_date,unique,PASS,0,silver,2026-10-31T17:20:58.549590Z
-unique_silver_orders_order_id,unique,PASS,0,silver,2026-10-31T17:20:58.549590Z
-unique_silver_product_category_name_translation_product_category_name,unique,PASS,0,silver,2026-10-31T17:20:58.549590Z
-unique_silver_products_product_id,unique,PASS,0,silver,2026-10-31T17:20:58.549590Z
-unique_silver_sellers_seller_id,unique,PASS,0,silver,2026-10-31T17:20:58.549590Z
+unique_combination_silver_order_items_order_id__order_item_id,Khóa grain nhiều cột,PASS,0,silver,2026-11-02T16:51:42.292041Z
+unique_combination_silver_order_payments_order_id__payment_sequential,Khóa grain nhiều cột,PASS,0,silver,2026-11-02T16:51:42.292041Z
+unique_combination_silver_order_reviews_review_id__order_id,Khóa grain nhiều cột,PASS,0,silver,2026-11-02T16:51:42.292041Z
+test_silver_bronze_row_reconciliation,Tùy chỉnh (nghiệp vụ / đối soát),PASS,0,silver,2026-11-02T16:51:42.292041Z
+test_silver_carrier_after_purchase,Tùy chỉnh (nghiệp vụ / đối soát),WARN,166,silver,2026-11-02T16:51:42.292041Z
+test_silver_delivery_dates,Tùy chỉnh (nghiệp vụ / đối soát),PASS,0,silver,2026-11-02T16:51:42.292041Z
+test_silver_geolocation_customer_coverage,Tùy chỉnh (nghiệp vụ / đối soát),WARN,285,silver,2026-11-02T16:51:42.292041Z
+test_silver_non_negative_amounts,Tùy chỉnh (nghiệp vụ / đối soát),PASS,0,silver,2026-11-02T16:51:42.292041Z
+test_silver_review_after_purchase,Tùy chỉnh (nghiệp vụ / đối soát),WARN,64,silver,2026-11-02T16:51:42.292041Z
+accepted_values_silver_customers_customer_state__AC__AL__AM__AP__BA__CE__DF__ES__GO__MA__MG__MS__MT__PA__PB__PE__PI__PR__RJ__RN__RO__RR__RS__SC__SE__SP__TO,accepted_values,PASS,0,silver,2026-11-02T16:51:42.292041Z
+accepted_values_silver_geolocation_geolocation_state__AC__AL__AM__AP__BA__CE__DF__ES__GO__MA__MG__MS__MT__PA__PB__PE__PI__PR__RJ__RN__RO__RR__RS__SC__SE__SP__TO,accepted_values,PASS,0,silver,2026-11-02T16:51:42.292041Z
+accepted_values_silver_order_payments_payment_type__credit_card__boleto__voucher__debit_card__not_defined,accepted_values,PASS,0,silver,2026-11-02T16:51:42.292041Z
+accepted_values_silver_order_reviews_review_score__False__1__2__3__4__5,accepted_values,PASS,0,silver,2026-11-02T16:51:42.292041Z
+accepted_values_silver_orders_order_status__delivered__shipped__canceled__unavailable__invoiced__processing__created__approved,accepted_values,PASS,0,silver,2026-11-02T16:51:42.292041Z
+accepted_values_silver_product_category_name_translation_translation_source__olist__manual_supplement__placeholder,accepted_values,PASS,0,silver,2026-11-02T16:51:42.292041Z
+accepted_values_silver_sellers_seller_state__AC__AL__AM__AP__BA__CE__DF__ES__GO__MA__MG__MS__MT__PA__PB__PE__PI__PR__RJ__RN__RO__RR__RS__SC__SE__SP__TO,accepted_values,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_customers_customer_id,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_customers_customer_state,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_customers_customer_unique_id,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_customers_customer_zip_code_prefix,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_geolocation_geolocation_lat,not_null,WARN,5,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_geolocation_geolocation_state,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_geolocation_geolocation_zip_code_prefix,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_holidays_holiday_date,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_holidays_holiday_name,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_items_freight_value,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_items_order_id,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_items_order_item_id,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_items_price,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_items_product_id,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_items_seller_id,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_payments_order_id,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_payments_payment_installments,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_payments_payment_sequential,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_payments_payment_type,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_payments_payment_value,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_reviews_order_id,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_reviews_review_answer_timestamp,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_reviews_review_creation_date,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_reviews_review_id,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_order_reviews_review_score,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_orders_customer_id,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_orders_order_estimated_delivery_date,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_orders_order_id,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_orders_order_purchase_date,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_orders_order_purchase_timestamp,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_orders_order_status,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_product_category_name_translation_product_category_name,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_product_category_name_translation_product_category_name_english,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_products_product_category_name,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_products_product_category_name_english,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_products_product_id,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_sellers_seller_city,not_null,WARN,2,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_sellers_seller_id,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_sellers_seller_state,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+not_null_silver_sellers_seller_zip_code_prefix,not_null,PASS,0,silver,2026-11-02T16:51:42.292041Z
+relationships_silver_order_items_order_id__order_id__ref_silver_orders_,relationships,PASS,0,silver,2026-11-02T16:51:42.292041Z
+relationships_silver_order_items_product_id__product_id__ref_silver_products_,relationships,PASS,0,silver,2026-11-02T16:51:42.292041Z
+relationships_silver_order_items_seller_id__seller_id__ref_silver_sellers_,relationships,PASS,0,silver,2026-11-02T16:51:42.292041Z
+relationships_silver_order_payments_order_id__order_id__ref_silver_orders_,relationships,PASS,0,silver,2026-11-02T16:51:42.292041Z
+relationships_silver_order_reviews_order_id__order_id__ref_silver_orders_,relationships,PASS,0,silver,2026-11-02T16:51:42.292041Z
+relationships_silver_orders_customer_id__customer_id__ref_silver_customers_,relationships,PASS,0,silver,2026-11-02T16:51:42.292041Z
+relationships_silver_products_product_category_name__product_category_name__ref_silver_product_category_name_translation_,relationships,PASS,0,silver,2026-11-02T16:51:42.292041Z
+unique_silver_customers_customer_id,unique,PASS,0,silver,2026-11-02T16:51:42.292041Z
+unique_silver_geolocation_geolocation_zip_code_prefix,unique,PASS,0,silver,2026-11-02T16:51:42.292041Z
+unique_silver_holidays_holiday_date,unique,PASS,0,silver,2026-11-02T16:51:42.292041Z
+unique_silver_orders_order_id,unique,PASS,0,silver,2026-11-02T16:51:42.292041Z
+unique_silver_product_category_name_translation_product_category_name,unique,PASS,0,silver,2026-11-02T16:51:42.292041Z
+unique_silver_products_product_id,unique,PASS,0,silver,2026-11-02T16:51:42.292041Z
+unique_silver_sellers_seller_id,unique,PASS,0,silver,2026-11-02T16:51:42.292041Z

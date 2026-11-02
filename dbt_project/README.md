@@ -20,18 +20,20 @@ dbt_project/
 
 ## Chạy nhanh
 
-Cách dễ nhất: mở `notebooks/03_Silver_Transformation.ipynb` trên Colab và chạy lần lượt các cell.
+Cách chính: `python scripts/export_parquet.py` từ thư mục gốc (dbt build toàn bộ, xem `AGENTS.md`).
+Theo từng tầng: notebook `03_Silver_Transformation`, `04_Gold_Data_Warehouse`, `05_Data_Quality`, `06_Business_Analytics`.
 
 Chạy tay (từ thư mục gốc repository, đã có `commerceflow.duckdb` chứa `bronze_*`):
 
 ```bash
 pip install "dbt-core>=1.10,<2.0" "dbt-duckdb>=1.10,<2.0"
 mkdir -p ~/.dbt && cp dbt_project/profiles.yml.example ~/.dbt/profiles.yml
-export DUCKDB_PATH="$(pwd)/commerceflow.duckdb"     # Windows PowerShell: $env:DUCKDB_PATH = "$PWD\commerceflow.duckdb"
+export DUCKDB_PATH="$(pwd)/commerceflow.duckdb" PYTHONUTF8=1   # PowerShell: $env:DUCKDB_PATH = "$PWD\commerceflow.duckdb"; $env:PYTHONUTF8 = "1"
 cd dbt_project
 dbt debug
 dbt run  --select silver
-dbt test --select silver
+dbt test --select silver --exclude test_sales_reconciliation   # test này cần tầng Gold
+dbt build                                                     # toàn bộ Silver -> Gold -> Mart + test
 ```
 
 ## Tầng Silver (C02)
@@ -55,12 +57,20 @@ Silver **không xóa** bản ghi hợp lệ về nghiệp vụ: bất thường 
 
 - `dim_customer`: dùng `customer_unique_id`; nối đơn hàng qua `silver_orders.customer_id → silver_customers.customer_id`.
 - `fact_reviews` / phân tích 1 đánh giá mỗi đơn: lọc `is_latest_review = true`.
-- `dim_geography`: 285 khách hàng/người bán có ZIP không có trong `silver_geolocation` → cần thành viên "không xác định".
+- `dim_geography`: 285 khách hàng/người bán có ZIP không có trong `silver_geolocation` → đã bổ sung city/state từ địa chỉ khách hàng/người bán (`location_source`).
 - `dim_date`: lấy cờ ngày lễ từ `silver_holidays`.
 - Tiền tệ đã là DECIMAL(12,2), cộng dồn khớp tuyệt đối với Bronze.
 
 ## Kiểm thử (C03)
 
-`dbt test --select silver` chạy 72 test: unique, not_null, accepted_values, relationships, khóa nhiều cột và 8 test tùy chỉnh
+`dbt test --select silver` chạy 70 test: unique, not_null, accepted_values, relationships, khóa nhiều cột và 6 test tùy chỉnh
 (`tests/test_silver_*.sql`). Test mức `warn` ghi nhận bất thường thật của dữ liệu nguồn, không chặn pipeline.
 Kết quả lần chạy gần nhất: `docs/data_quality/silver_test_results.csv`.
+
+## Tầng Gold và kiểm thử (D02–D04, E01–E03)
+
+- `models/gold/dimensions/`: `dim_customer`, `dim_product`, `dim_seller`, `dim_date`, `dim_geography`.
+- `models/gold/facts/`: `fact_orders`, `fact_order_items`, `fact_payments`, `fact_reviews` (grain: `docs/star_schema/bus_matrix.md`).
+- `models/gold/marts/`: `mart_sales`, `mart_delivery`, `mart_customer` + `schema.yml`.
+- Test Gold: `test_gold_fact_grain`, `test_gold_dimension_relationships`, `test_sales_reconciliation` (Bronze → Silver → Gold),
+  `test_mart_reconciliation` (Gold → Mart). `dbt build` toàn bộ: 22 model + 89 test, kết quả mong đợi `PASS=106 WARN=5 ERROR=0`.
