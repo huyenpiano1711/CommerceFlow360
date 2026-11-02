@@ -1,0 +1,63 @@
+version: 2
+
+# =============================================================================
+# Kiểm thử tầng Data Mart - Task E01-E03 (Quỳnh Kha)
+# Cùng nhóm kiểm thử với Silver/Gold: khóa/grain, miền giá trị, đối soát số liệu
+# (đối soát doanh thu/số đơn nằm ở tests/test_mart_reconciliation.sql).
+# =============================================================================
+
+models:
+  - name: mart_sales
+    description: "Doanh thu theo dòng hàng, kèm thời gian/danh mục/bang/người bán. Grain: 1 dòng / (order_id, order_item_id)."
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: ['order_id', 'order_item_id']
+    columns:
+      - name: order_id
+        data_tests: [not_null]
+      - name: order_item_id
+        data_tests: [not_null]
+      - name: revenue
+        description: "price của dòng hàng (chưa gồm freight_value)."
+        data_tests: [not_null]
+      - name: is_valid_sale
+        description: "FALSE nếu đơn ở trạng thái canceled/unavailable - loại khỏi KPI doanh thu."
+        data_tests: [not_null]
+
+  - name: mart_delivery
+    description: "Thời gian giao hàng và đánh giá theo đơn x người bán tham gia đơn. Grain: 1 dòng / (order_id, seller_id)."
+    columns:
+      - name: order_id
+        data_tests: [not_null]
+      - name: is_delivered_late
+        description: "NULL nếu đơn chưa giao (không có order_delivered_customer_date)."
+      - name: review_score
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
+                config:
+                  severity: warn
+
+  - name: mart_customer
+    description: "Hồ sơ mua hàng theo khách (customer_unique_id). Grain: 1 dòng / customer_key."
+    columns:
+      - name: customer_key
+        data_tests: [unique, not_null]
+      - name: customer_unique_id
+        data_tests: [unique, not_null]
+      - name: order_count
+        data_tests: [not_null]
+      - name: total_spend
+        description: "Tổng payment_value của các đơn hợp lệ (fact_orders.is_valid_order)."
+        data_tests: [not_null]
+      - name: has_valid_order
+        description: "TRUE nếu khách có ít nhất 1 đơn hợp lệ. Lọc cờ này khi tính tỷ lệ mua lại, recency, phân khúc."
+        data_tests: [not_null]
+      - name: is_repeat_customer
+        description: "TRUE nếu khách có >= 2 đơn hợp lệ (theo customer_unique_id)."
+        data_tests: [not_null]
+      - name: days_since_last_order
+        description: "Số ngày từ last_order_date đến ngày đặt hàng lớn nhất toàn dữ liệu (snapshot_date); >= 0 theo cách tính date_diff, kiểm tra ở tests/test_mart_reconciliation.sql."

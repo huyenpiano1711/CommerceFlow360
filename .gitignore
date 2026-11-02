@@ -31,6 +31,11 @@ dbt_project/.user.yml
 # Generated/intermediate data (raw Olist CSV files are intentionally tracked)
 data/exports/*
 !data/exports/.gitkeep
+# [Sửa] 3 mart + kết quả kiểm thử là đầu vào bắt buộc của dashboard (Task E05 -> F01), cần có trên repo
+!data/exports/mart_sales.parquet
+!data/exports/mart_delivery.parquet
+!data/exports/mart_customer.parquet
+!data/exports/quality_results.parquet
 data/reference/*.tmp
 data/profiling/*.tmp
 

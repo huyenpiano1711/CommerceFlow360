@@ -42,8 +42,15 @@ select
     order_context.order_status,
     1::integer as order_count,
 
+    -- [Sửa logic] Định nghĩa "đơn hợp lệ" dùng chung cho mọi Data Mart (doanh thu, chi tiêu,
+    -- khách mua lại): loại đơn bị hủy hoặc không còn hàng. Đặt ở fact để không mart nào tự định nghĩa lại.
+    (order_context.order_status not in ('canceled', 'unavailable')) as is_valid_order,
+
+    -- [Sửa logic] Chỉ số giao hàng chỉ tính cho đơn có trạng thái 'delivered'.
+    -- Nguồn có 6 đơn canceled vẫn mang ngày giao khách; trước đây các đơn này bị tính vào tỷ lệ giao trễ.
     case
-        when order_context.order_delivered_customer_date is not null
+        when order_context.order_status = 'delivered'
+         and order_context.order_delivered_customer_date is not null
             then date_diff(
                 'day',
                 cast(order_context.order_purchase_timestamp as date),
@@ -52,7 +59,8 @@ select
     end as delivery_days,
 
     case
-        when order_context.order_delivered_customer_date is not null
+        when order_context.order_status = 'delivered'
+         and order_context.order_delivered_customer_date is not null
          and order_context.order_estimated_delivery_date is not null
             then greatest(
                 date_diff(
@@ -65,7 +73,8 @@ select
     end as days_late,
 
     case
-        when order_context.order_delivered_customer_date is null
+        when order_context.order_status <> 'delivered'
+          or order_context.order_delivered_customer_date is null
           or order_context.order_estimated_delivery_date is null
             then null
         else cast(order_context.order_delivered_customer_date as date)
