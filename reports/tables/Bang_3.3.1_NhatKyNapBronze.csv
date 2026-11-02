@@ -1,11 +1,11 @@
 ﻿table_name,source_file,csv_rows,loaded_rows,column_count,status,ingested_at
-bronze_customers,olist_customers_dataset.csv,99441,99441,5,PASS,2026-11-02 15:35:32.219866
-bronze_geolocation,olist_geolocation_dataset.csv,1000163,1000163,5,PASS,2026-11-02 15:35:32.219866
-bronze_order_items,olist_order_items_dataset.csv,112650,112650,7,PASS,2026-11-02 15:35:32.219866
-bronze_order_payments,olist_order_payments_dataset.csv,103886,103886,5,PASS,2026-11-02 15:35:32.219866
-bronze_order_reviews,olist_order_reviews_dataset.csv,99224,99224,7,PASS,2026-11-02 15:35:32.219866
-bronze_orders,olist_orders_dataset.csv,99441,99441,8,PASS,2026-11-02 15:35:32.219866
-bronze_products,olist_products_dataset.csv,32951,32951,9,PASS,2026-11-02 15:35:32.219866
-bronze_sellers,olist_sellers_dataset.csv,3095,3095,4,PASS,2026-11-02 15:35:32.219866
-bronze_product_category_name_translation,product_category_name_translation.csv,71,71,2,PASS,2026-11-02 15:35:32.219866
-bronze_holidays,holidays_brazil.csv,27,27,4,PASS,2026-11-02 15:35:32.219866
+bronze_customers,olist_customers_dataset.csv,99441,99441,5,PASS,2026-11-02 16:49:05.842651
+bronze_geolocation,olist_geolocation_dataset.csv,1000163,1000163,5,PASS,2026-11-02 16:49:05.842651
+bronze_order_items,olist_order_items_dataset.csv,112650,112650,7,PASS,2026-11-02 16:49:05.842651
+bronze_order_payments,olist_order_payments_dataset.csv,103886,103886,5,PASS,2026-11-02 16:49:05.842651
+bronze_order_reviews,olist_order_reviews_dataset.csv,99224,99224,7,PASS,2026-11-02 16:49:05.842651
+bronze_orders,olist_orders_dataset.csv,99441,99441,8,PASS,2026-11-02 16:49:05.842651
+bronze_products,olist_products_dataset.csv,32951,32951,9,PASS,2026-11-02 16:49:05.842651
+bronze_sellers,olist_sellers_dataset.csv,3095,3095,4,PASS,2026-11-02 16:49:05.842651
+bronze_product_category_name_translation,product_category_name_translation.csv,71,71,2,PASS,2026-11-02 16:49:05.842651
+bronze_holidays,holidays_brazil.csv,27,27,4,PASS,2026-11-02 16:49:05.842651

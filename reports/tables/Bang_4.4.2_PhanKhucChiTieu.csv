@@ -1,4 +1,4 @@
-spend_quartile,customer_count,min_spend,max_spend,total_spend_segment,pct_revenue
+﻿spend_quartile,customer_count,min_spend,max_spend,total_spend_segment,pct_revenue
 1,23748,9.59,63.1,1036556.95,6.59
 2,23747,63.1,107.9,1987313.44,12.63
 3,23747,107.92,182.94,3354705.92,21.31

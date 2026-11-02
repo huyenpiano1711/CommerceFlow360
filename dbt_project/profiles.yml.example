@@ -4,7 +4,7 @@
 #   1) Sao chép file này thành ~/.dbt/profiles.yml  (hoặc vào thư mục bất kỳ
 #      rồi chạy dbt với --profiles-dir <thư mục đó>).
 #   2) Đặt biến môi trường DUCKDB_PATH trỏ tới file commerceflow.duckdb
-#      (notebook 03_Silver_Transformation.ipynb tự làm hai bước này).
+#      (script và notebook tự làm hai bước này qua src/utils/project.py).
 # Nếu không đặt DUCKDB_PATH, dbt dùng ../commerceflow.duckdb tính từ thư mục
 # dbt_project/, tức là file commerceflow.duckdb ở thư mục gốc repository.
 # =============================================================================

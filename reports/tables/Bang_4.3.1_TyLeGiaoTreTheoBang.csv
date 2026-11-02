@@ -1,4 +1,4 @@
-customer_state,order_count,late_rate,avg_days_late
+﻿customer_state,order_count,late_rate,avg_days_late
 SP,40501,0.0449,0.37
 RJ,12350,0.1211,1.64
 MG,11354,0.0457,0.38
