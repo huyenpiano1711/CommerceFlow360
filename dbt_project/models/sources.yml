@@ -1,0 +1,41 @@
+version: 2
+
+# Nguồn Bronze do notebook 02_Bronze_Ingestion.ipynb (Task B01) nạp vào DuckDB.
+# Quy tắc tên: bronze_<tên bảng gốc>, bỏ tiền tố olist_ và hậu tố _dataset.
+# Nếu tên bảng Bronze thực tế khác, chỉ sửa "identifier" ở đây; các model Silver
+# luôn gọi nguồn qua source('bronze', '<name>') nên không phải sửa SQL.
+sources:
+  - name: bronze
+    description: "Tầng Bronze - dữ liệu thô nạp nguyên trạng từ 9 CSV Olist và bảng ngày lễ Brazil."
+    schema: main
+    tables:
+      - name: customers
+        identifier: bronze_customers
+        description: "Khách hàng theo từng đơn (olist_customers_dataset.csv). Grain: customer_id."
+      - name: geolocation
+        identifier: bronze_geolocation
+        description: "Tọa độ theo tiền tố mã ZIP (olist_geolocation_dataset.csv). Nhiều dòng / ZIP."
+      - name: order_items
+        identifier: bronze_order_items
+        description: "Dòng hàng trong đơn (olist_order_items_dataset.csv). Grain: order_id + order_item_id."
+      - name: order_payments
+        identifier: bronze_order_payments
+        description: "Dòng thanh toán (olist_order_payments_dataset.csv). Grain: order_id + payment_sequential."
+      - name: order_reviews
+        identifier: bronze_order_reviews
+        description: "Đánh giá đơn hàng (olist_order_reviews_dataset.csv). Grain: review_id + order_id."
+      - name: orders
+        identifier: bronze_orders
+        description: "Đơn hàng và các mốc thời gian (olist_orders_dataset.csv). Grain: order_id."
+      - name: products
+        identifier: bronze_products
+        description: "Sản phẩm (olist_products_dataset.csv). Grain: product_id."
+      - name: sellers
+        identifier: bronze_sellers
+        description: "Người bán (olist_sellers_dataset.csv). Grain: seller_id."
+      - name: product_category_name_translation
+        identifier: bronze_product_category_name_translation
+        description: "Bản dịch tên danh mục Bồ Đào Nha -> tiếng Anh (product_category_name_translation.csv)."
+      - name: holidays
+        identifier: bronze_holidays
+        description: "Ngày lễ quốc gia Brazil 2016-2018 sinh bằng thư viện holidays (holidays_brazil.csv)."
