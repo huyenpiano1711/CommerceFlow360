@@ -8,12 +8,12 @@ import streamlit as st
 
 from components.ui import (
     STRETCH,
-    AMBER, BLUE, GREEN, RED, empty_guard, filter_summary, fmt_int, fmt_money, fmt_num, fmt_pct,
-    fmt_pct_points, page_header, setup_page, sidebar_filters, style_fig,
+    BLUE, empty_guard, filter_summary, fmt_int, fmt_money, fmt_money_short, fmt_num, fmt_pct,
+    page_header, setup_page, sidebar_filters, style_fig, vn_axis_ticks,
 )
 from services.data_loader import (
-    customer_kpis, delivery_kpis, filter_delivery, filter_sales, load_customer, load_delivery,
-    load_quality, load_sales, sales_kpis,
+    FULL_MONTH_END, FULL_MONTH_START, customer_kpis, delivery_kpis, filter_delivery, filter_sales,
+    load_customer, load_delivery, load_quality, load_sales, sales_kpis,
 )
 
 setup_page("Tổng quan", "📦")
@@ -23,9 +23,10 @@ page_header(
     "Bronze → Silver → Gold → Data Mart → Dashboard.",
 )
 
+sales_all = load_sales()
 filters = sidebar_filters(use_category=True, use_state=True)
 
-sales_all, delivery_all, customer_all, quality = load_sales(), load_delivery(), load_customer(), load_quality()
+delivery_all, customer_all, quality = load_delivery(), load_customer(), load_quality()
 sales = filter_sales(sales_all, filters)
 delivery = filter_delivery(delivery_all, filters)
 empty_guard(sales)
@@ -37,10 +38,15 @@ st.caption(filter_summary(filters))
 # --------------------------------------------------------------------- KPI chính
 st.subheader("Kinh doanh")
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Doanh thu (đơn hợp lệ)", fmt_money(sk["revenue"], 0), help="Tổng price của dòng hàng thuộc đơn không bị canceled/unavailable. Không gồm phí vận chuyển.")
+c1.metric("Doanh thu (đơn hợp lệ)", fmt_money_short(sk["revenue"]), help="Tổng price của dòng hàng thuộc đơn không bị canceled/unavailable. Không gồm phí vận chuyển.")
 c2.metric("Số đơn hợp lệ", fmt_int(sk["orders"]), help="count(distinct order_id) trên đơn hợp lệ.")
-c3.metric("Giá trị đơn trung bình (AOV)", fmt_money(sk["aov"]), help="Doanh thu / số đơn hợp lệ.")
-c4.metric("Phí vận chuyển (đơn hợp lệ)", fmt_money(sk["freight"], 0), help="Measure riêng, không cộng vào doanh thu.")
+aov_label = "Doanh thu danh mục / đơn" if filters.categories else "Giá trị đơn trung bình (AOV)"
+aov_help = ("Doanh thu của danh mục đã chọn / số đơn có sản phẩm thuộc danh mục đó; không phải tổng giá trị toàn đơn."
+            if filters.categories else "Doanh thu / số đơn hợp lệ.")
+c3.metric(aov_label, fmt_money(sk["aov"]), help=aov_help)
+c4.metric("Phí vận chuyển (đơn hợp lệ)", fmt_money_short(sk["freight"]), help="Measure riêng, không cộng vào doanh thu.")
+if filters.categories:
+    st.caption("AOV đang phản ánh doanh thu của danh mục đã chọn trên mỗi đơn có sản phẩm thuộc danh mục đó.")
 
 st.subheader("Vận hành giao hàng")
 d1, d2, d3, d4 = st.columns(4)
@@ -54,7 +60,7 @@ k1, k2, k3, k4 = st.columns(4)
 k1.metric("Khách hàng (customer_unique_id)", fmt_int(ck["customers"]), help="Khách có ít nhất 1 đơn hợp lệ.")
 k2.metric("Khách mua lại (≥ 2 đơn)", fmt_int(ck["repeat_customers"]))
 k3.metric("Tỷ lệ mua lại", fmt_pct(ck["repeat_rate"]))
-k4.metric("Chi tiêu TB: mua lại vs 1 lần", f'{fmt_num(ck["avg_spend_repeat"], 0)} vs {fmt_num(ck["avg_spend_single"], 0)}',
+k4.metric("Chi tiêu TB: mua lại vs 1 lần", f'{fmt_money_short(ck["avg_spend_repeat"])} vs {fmt_money_short(ck["avg_spend_single"])}',
           help="Tổng payment_value trung bình mỗi khách (R$), đơn hợp lệ.")
 st.caption("Chỉ số khách hàng tính theo customer_unique_id trên toàn bộ dữ liệu; mart_customer không có chiều bang/danh mục/tháng "
            "nên không chịu tác động của bộ lọc chung.")
@@ -65,16 +71,33 @@ valid = sales[sales["is_valid_sale"]]
 monthly = (valid.groupby("year_month")
                 .agg(revenue=("revenue", "sum"), orders=("order_id", "nunique")).reset_index())
 fig = go.Figure()
-fig.add_bar(x=monthly["year_month"], y=monthly["orders"], name="Số đơn", marker_color="#cbd5e1", yaxis="y2")
-fig.add_scatter(x=monthly["year_month"], y=monthly["revenue"], name="Doanh thu (R$)", mode="lines+markers", line=dict(color=BLUE))
+fig.add_bar(
+    x=monthly["year_month"], y=monthly["orders"], name="Số đơn", marker_color="#b8d8d2", yaxis="y2",
+    customdata=monthly["orders"].map(fmt_int),
+    hovertemplate="%{x}<br>Số đơn: %{customdata}<extra></extra>",
+)
+fig.add_scatter(
+    x=monthly["year_month"], y=monthly["revenue"], name="Doanh thu (R$)", mode="lines+markers",
+    line=dict(color=BLUE, width=3), marker=dict(size=7), customdata=monthly["revenue"].map(fmt_money),
+    hovertemplate="%{x}<br>Doanh thu: %{customdata}<extra></extra>",
+)
 fig.update_layout(
-    yaxis=dict(title="Doanh thu (R$)", tickformat=",.0f"),
-    yaxis2=dict(title="Số đơn", overlaying="y", side="right", showgrid=False),
-    xaxis=dict(tickangle=-60),
+    yaxis=dict(title="Doanh thu (R$)", **vn_axis_ticks(monthly["revenue"])),
+    yaxis2=dict(title="Số đơn", overlaying="y", side="right", showgrid=False,
+                **vn_axis_ticks(monthly["orders"])),
+    xaxis=dict(type="category", tickangle=-60),
 )
 st.plotly_chart(style_fig(fig, 360), **STRETCH)
-st.caption("Lưu ý: 09–12/2016 (giai đoạn khởi động) và 09/2018 (chỉ 1 đơn do dữ liệu bị cắt) không phản ánh kinh doanh thực; "
-           "bật “Chỉ các tháng đầy đủ” ở thanh bên để loại khỏi so sánh.")
+partial_months = (sales_all.groupby("year_month")["order_id"].nunique().rename("orders").reset_index())
+partial_months = partial_months[
+    (partial_months["year_month"] < FULL_MONTH_START) | (partial_months["year_month"] > FULL_MONTH_END)
+]
+partial_summary = ", ".join(
+    f"{row.year_month} ({fmt_int(row.orders)} đơn)" for row in partial_months.itertuples(index=False)
+)
+if partial_summary:
+    st.caption(f"Các tháng ngoài giai đoạn đầy đủ trong dữ liệu: {partial_summary}. "
+               "Có thể bật/tắt “Chỉ các tháng đầy đủ” ở thanh bên để đưa chúng vào/loại khỏi biểu đồ.")
 
 # --------------------------------------------------------------------- tình trạng dữ liệu
 st.subheader("Tình trạng kiểm thử dữ liệu")

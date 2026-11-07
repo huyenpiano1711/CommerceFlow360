@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from components.ui import STRETCH, AMBER, BLUE, GREEN, RED, fmt_int, fmt_num, page_header, setup_page, style_fig
+from components.ui import STRETCH, AMBER, BLUE, GREEN, RED, fmt_int, fmt_money, fmt_num, page_header, setup_page, style_fig
 from services.data_loader import (
     load_customer, load_delivery, load_quality, load_reconciliation_reference, load_sales,
 )
@@ -66,6 +66,8 @@ with right:
     fig = px.bar(long, x="so_luong", y="loai", color="status", orientation="h", barmode="stack", text="so_luong",
                  color_discrete_map={"pass": GREEN, "warn": AMBER, "fail": RED, "error": RED},
                  labels={"loai": "", "so_luong": "Số test", "status": "Trạng thái"}, title="Số test theo loại")
+    ticks = sorted(long["so_luong"].unique())
+    fig.update_xaxes(tickmode="array", tickvals=ticks, ticktext=[fmt_int(value) for value in ticks])
     st.plotly_chart(style_fig(fig, 320), **STRETCH)
 
 # ------------------------------------------------------------------ cảnh báo
@@ -73,7 +75,7 @@ st.subheader("Các cảnh báo (warn) và ý nghĩa")
 WARN_NOTES = {
     "test_silver_carrier_after_purchase": "Đơn có ngày bàn giao cho đơn vị vận chuyển sớm hơn thời điểm đặt hàng. Đã gắn cờ flag_carrier_before_purchase ở Silver; không tự sửa giá trị.",
     "test_silver_review_after_purchase": "Đánh giá có ngày tạo sớm hơn ngày đặt hàng. Giữ nguyên, ghi nhận như nhiễu nguồn.",
-    "test_silver_geolocation_customer_coverage": "Khách hàng/người bán có mã ZIP không khớp bảng geolocation (278 khách + 7 người bán); các thuộc tính địa lý có thể NULL.",
+    "test_silver_geolocation_customer_coverage": "Mã ZIP của khách hàng/người bán không khớp bảng geolocation; các thuộc tính địa lý có thể NULL.",
     "not_null_silver_geolocation_geolocation_lat": "ZIP không còn tọa độ hợp lệ trong lãnh thổ Brazil sau khi loại điểm ngoài khung tọa độ.",
     "not_null_silver_sellers_seller_city": "Người bán có tên thành phố không hợp lệ (số, email) bị chuyển NULL kèm cờ flag_city_invalid.",
 }
@@ -82,6 +84,7 @@ if warns.empty:
     st.info("Không có cảnh báo nào trong lần chạy gần nhất.")
 else:
     warns["y_nghia"] = warns["test_name"].map(WARN_NOTES).fillna("Cảnh báo chưa có diễn giải; xem dbt_project/README.md.")
+    warns["failing_rows"] = warns["failing_rows"].map(fmt_int)
     st.dataframe(
         warns[["tang", "test_name", "failing_rows", "y_nghia"]].rename(
             columns={"tang": "Nhóm (theo tên test)", "test_name": "Test", "failing_rows": "Số bản ghi", "y_nghia": "Diễn giải"}),
@@ -118,10 +121,13 @@ if ref is not None:
     add["Kết quả"] = add["Chênh lệch"].abs().map(lambda d: "Khớp" if d < 0.01 else "Lệch")
     recon = pd.concat([recon, add], ignore_index=True)
 
-st.dataframe(recon, hide_index=True, **STRETCH,
-             column_config={"Giá trị đo được": st.column_config.NumberColumn(format="%.2f"),
-                            "Giá trị kỳ vọng": st.column_config.NumberColumn(format="%.2f"),
-                            "Chênh lệch": st.column_config.NumberColumn(format="%.2f")})
+recon_display = recon.copy()
+for column in ["Giá trị đo được", "Giá trị kỳ vọng", "Chênh lệch"]:
+    recon_display[column] = [
+        fmt_int(value) if label.startswith("Grain") or label.startswith("Số đơn") else fmt_money(value)
+        for label, value in zip(recon["Kiểm tra"], recon[column])
+    ]
+st.dataframe(recon_display, hide_index=True, **STRETCH)
 if (recon["Kết quả"] == "Lệch").any():
     st.error("Có chỉ số lệch. Không sửa số cho khớp; kiểm tra lại pipeline theo AGENTS.md.")
 else:
@@ -131,7 +137,15 @@ if ref is None:
             "Chạy notebook 05_Data_Quality.ipynb hoặc pipeline để tạo bảng này.")
 else:
     with st.expander("Bảng 3.7.1 – Đối soát Bronze → Silver → Gold (task D04)"):
-        st.dataframe(ref.reset_index(), hide_index=True, **STRETCH)
+        ref_display = ref.reset_index().copy()
+        for column in ["source_value", "silver_value", "gold_value",
+                       "source_to_silver_difference", "silver_to_gold_difference"]:
+            if column in ref_display:
+                ref_display[column] = [
+                    fmt_int(value) if metric == "order_count" else fmt_money(value)
+                    for metric, value in zip(ref_display["metric"], ref_display[column])
+                ]
+        st.dataframe(ref_display, hide_index=True, **STRETCH)
 st.caption(f"mart_delivery chỉ gồm đơn có ít nhất 1 dòng hàng ({fmt_int(orders_delivery)} đơn); các đơn không có order_items không nằm trong mart nên phải so với "
            "fact_order_items, không so với tổng fact_orders.")
 
@@ -142,9 +156,12 @@ status_sel = f1.multiselect("Trạng thái", sorted(quality["status"].unique()),
 layer_sel = f2.multiselect("Nhóm (suy từ tên test)", ["Silver", "Gold", "Mart"], default=["Silver", "Gold", "Mart"])
 type_sel = f3.multiselect("Loại test", sorted(quality["loai"].unique()), default=sorted(quality["loai"].unique()))
 view = quality[quality["status"].isin(status_sel) & quality["tang"].isin(layer_sel) & quality["loai"].isin(type_sel)]
+view_display = view[["tang", "loai", "test_name", "status", "failing_rows", "execution_time_sec"]].rename(
+    columns={"tang": "Nhóm (theo tên test)", "loai": "Loại", "test_name": "Test", "status": "Trạng thái",
+             "failing_rows": "Bản ghi vi phạm", "execution_time_sec": "Thời gian (s)"}
+).copy()
+view_display["Bản ghi vi phạm"] = view_display["Bản ghi vi phạm"].map(fmt_int)
+view_display["Thời gian (s)"] = view_display["Thời gian (s)"].map(lambda value: fmt_num(value, 3))
 st.dataframe(
-    view[["tang", "loai", "test_name", "status", "failing_rows", "execution_time_sec"]].rename(
-        columns={"tang": "Nhóm (theo tên test)", "loai": "Loại", "test_name": "Test", "status": "Trạng thái",
-                 "failing_rows": "Bản ghi vi phạm", "execution_time_sec": "Thời gian (s)"}),
-    hide_index=True, **STRETCH, height=420)
+    view_display, hide_index=True, **STRETCH, height=420)
 st.caption(f"Hiển thị {fmt_int(len(view))}/{fmt_int(total)} test. Nguồn: data/exports/quality_results.parquet (từ target/run_results.json của dbt).")

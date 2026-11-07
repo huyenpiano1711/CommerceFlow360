@@ -10,7 +10,7 @@ import streamlit as st
 from components.ui import (
     STRETCH,
     BLUE, GREEN, RED, empty_guard, filter_summary, fmt_int, fmt_num, fmt_pct, page_header,
-    setup_page, sidebar_filters, style_fig,
+    setup_page, sidebar_filters, style_fig, vn_axis_ticks,
 )
 from services.data_loader import (
     delivery_kpis, eligible_delivered, filter_delivery, load_delivery, orders_dedup,
@@ -52,9 +52,14 @@ if mode.startswith("Top"):
 else:
     show = by_state[by_state["orders"] >= 100].sort_values("late_rate", ascending=False)
 show = show.assign(late_pct=show["late_rate"] * 100)
-fig = px.bar(show, x="customer_state", y="late_pct", hover_data={"orders": ":,.0f", "avg_days_late": ":.2f", "late_pct": ":.2f"},
+show["orders_label"] = show["orders"].map(fmt_int)
+show["avg_days_late_label"] = show["avg_days_late"].map(fmt_num)
+show["late_pct_label"] = show["late_pct"].map(fmt_num)
+fig = px.bar(show, x="customer_state", y="late_pct",
+             custom_data=["orders_label", "avg_days_late_label", "late_pct_label"],
              labels={"late_pct": "Tỷ lệ giao trễ (%)", "customer_state": "Bang"})
-fig.update_traces(marker_color=RED)
+fig.update_traces(marker_color=RED, hovertemplate="%{x}<br>Tỷ lệ giao trễ: %{customdata[2]}%<br>Số đơn: %{customdata[0]}<br>Số ngày trễ TB: %{customdata[1]}<extra></extra>")
+fig.update_yaxes(**vn_axis_ticks(show["late_pct"], digits=1))
 fig.add_hline(y=k["late_rate"] * 100, line_dash="dash", line_color="#475569",
               annotation_text=f"Chung: {fmt_pct(k['late_rate'])}", annotation_position="top right")
 st.plotly_chart(style_fig(fig, 380), **STRETCH)
@@ -68,10 +73,13 @@ with left:
     rated["nhom"] = rated["is_delivered_late"].map({True: "Giao trễ", False: "Đúng hạn"})
     rv = (rated.groupby("nhom").agg(orders=("order_id", "count"), avg_review=("review_score", lambda s: s.astype(float).mean()))
                 .reindex(["Đúng hạn", "Giao trễ"]).reset_index())
+    rv["orders_label"] = rv["orders"].map(fmt_int)
     fig = px.bar(rv, x="nhom", y="avg_review", text=rv["avg_review"].map(lambda v: fmt_num(v)),
-                 hover_data={"orders": ":,.0f"}, labels={"avg_review": "Điểm đánh giá TB (1–5)", "nhom": ""})
+                 custom_data=["orders_label"], labels={"avg_review": "Điểm đánh giá TB (1–5)", "nhom": ""})
     fig.update_traces(marker_color=[GREEN, RED], textposition="outside")
+    fig.update_traces(hovertemplate="%{x}<br>Điểm trung bình: %{y:.2f}<br>Số đơn: %{customdata[0]}<extra></extra>")
     fig.update_yaxes(range=[0, 5])
+    fig.update_yaxes(**vn_axis_ticks([0, 5], digits=1))
     st.plotly_chart(style_fig(fig, 360), **STRETCH)
     st.caption("So sánh nhóm, không khẳng định quan hệ nhân quả.")
 with right:
@@ -81,6 +89,7 @@ with right:
                        x="d", nbins=min(cap, 60), labels={"d": "Số ngày từ đặt đến nhận"})
     fig.update_traces(marker_color=BLUE)
     fig.update_layout(yaxis_title="Số đơn", bargap=0.05)
+    fig.update_yaxes(**vn_axis_ticks(el["order_id"].value_counts().values))
     st.plotly_chart(style_fig(fig, 360), **STRETCH)
     st.caption(f"Hiển thị đến ngày thứ {cap} (phân vị 99); các đơn giao lâu hơn vẫn nằm trong KPI nhưng không vẽ để tránh kéo dài trục.")
 
@@ -88,9 +97,13 @@ with right:
 st.subheader("Tỷ lệ giao trễ theo tháng")
 by_month = (el.groupby("year_month")
               .agg(orders=("order_id", "count"), late_rate=("is_delivered_late", lambda s: s.astype(int).mean())).reset_index())
+by_month["late_label"] = by_month["late_rate"].map(fmt_pct)
+by_month["orders_label"] = by_month["orders"].map(fmt_int)
 fig = go.Figure(go.Scatter(x=by_month["year_month"], y=by_month["late_rate"] * 100, mode="lines+markers", line=dict(color=RED),
-                           customdata=by_month["orders"], hovertemplate="%{x}<br>%{y:.2f}% (%{customdata:,} đơn)<extra></extra>"))
-fig.update_layout(yaxis_title="Tỷ lệ giao trễ (%)", xaxis=dict(tickangle=-60))
+                           customdata=by_month[["late_label", "orders_label"]].values,
+                           hovertemplate="%{x}<br>Tỷ lệ trễ: %{customdata[0]}<br>Số đơn: %{customdata[1]}<extra></extra>"))
+fig.update_layout(yaxis_title="Tỷ lệ giao trễ (%)", xaxis=dict(type="category", tickangle=-60))
+fig.update_yaxes(**vn_axis_ticks(by_month["late_rate"] * 100, digits=1))
 st.plotly_chart(style_fig(fig, 320), **STRETCH)
 
 # ------------------------------------------------------------------ người bán
@@ -107,7 +120,10 @@ if sellers.empty:
     st.info("Không có người bán nào đạt ngưỡng số đơn trong bộ lọc hiện tại.")
 else:
     sellers = sellers.assign(late_rate=sellers["late_rate"] * 100)
-    st.dataframe(sellers.rename(columns={"seller_id": "Người bán", "orders": "Số đơn", "late_rate": "Tỷ lệ trễ (%)", "avg_review": "Điểm ĐG TB"}),
-                 hide_index=True, **STRETCH,
-                 column_config={"Tỷ lệ trễ (%)": st.column_config.NumberColumn(format="%.2f"),
-                                "Điểm ĐG TB": st.column_config.NumberColumn(format="%.2f")})
+    sellers_display = sellers.rename(
+        columns={"seller_id": "Người bán", "orders": "Số đơn", "late_rate": "Tỷ lệ trễ (%)", "avg_review": "Điểm ĐG TB"}
+    ).copy()
+    sellers_display["Số đơn"] = sellers_display["Số đơn"].map(fmt_int)
+    sellers_display["Tỷ lệ trễ (%)"] = sellers_display["Tỷ lệ trễ (%)"].map(fmt_num)
+    sellers_display["Điểm ĐG TB"] = sellers_display["Điểm ĐG TB"].map(fmt_num)
+    st.dataframe(sellers_display, hide_index=True, **STRETCH)
