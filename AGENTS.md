@@ -202,10 +202,9 @@ cd ..
 | `dbt build loi ... KHONG xuat Parquet` | Có model lỗi hoặc test FAIL | Đọc log dbt, sửa nguyên nhân gốc; không hạ test xuống `warn` để cho qua |
 | Lỗi cú pháp `data_tests`/`arguments` trong `schema.yml` | dbt < 1.10 | `pip install "dbt-core>=1.10,<2" "dbt-duckdb>=1.10,<2"` |
 
-## 11. Phần chưa làm (tính đến 02/11/2026)
+## 11. Chạy dashboard và phần chưa làm
 
+- Chạy dashboard từ thư mục gốc sau khi có đủ 4 file trong `data/exports/`: `streamlit run app/Home.py`.
+- Dashboard chỉ đọc Parquet; nếu báo thiếu file, chạy `python scripts/export_parquet.py` trước.
 - B02 `01_Data_Profiling_EDA.ipynb` + `reports/figures/Hinh_2.x_*.png`.
-- F01–F04 dashboard Streamlit (`app/Home.py`, `app/services/data_loader.py`, `app/pages/1_Sales.py`,
-  `2_Delivery.py`, `3_Customer.py`, `4_Data_Quality.py`) — đọc dữ liệu từ `data/exports/*.parquet`,
-  không nối lại CSV gốc.
 - G01 `07_Run_Full_Pipeline.ipynb` (có thể gọi `src.ingestion.bronze_ingestion.run`, `src.reporting.exports.build_and_export`, `src.reporting.kpi_report.run_all`).

@@ -64,9 +64,11 @@ Copy-Item dbt_project\profiles.yml.example "$env:USERPROFILE\.dbt\profiles.yml"
 python scripts\load_bronze.py        # B01: 10 bảng bronze_*
 python scripts\export_parquet.py     # C–E05: dbt build toàn bộ + xuất Parquet
 python scripts\run_e04_analytics.py  # E04: bảng/hình Chương 4
+streamlit run app/Home.py            # F01–F04: dashboard
 ```
 
 Trên Colab hoặc Linux/macOS, xem mục 4 của [AGENTS.md](AGENTS.md). Colab có phiên làm việc tạm thời: file DuckDB có thể mất khi runtime kết thúc, nên tải về hoặc sao lưu (notebook 02 có tùy chọn sao lưu lên Drive).
+Dashboard đọc các file Parquet trong `data/exports/`; nếu thiếu, chạy `scripts/export_parquet.py` trước.
 
 ## Lấy dữ liệu Olist
 
