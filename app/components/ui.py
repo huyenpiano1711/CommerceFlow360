@@ -6,6 +6,7 @@ kiểu Việt Nam, bảng màu thống nhất với biểu đồ trong báo cáo
 from __future__ import annotations
 
 import inspect
+import html
 import math
 
 import plotly.graph_objects as go
@@ -105,12 +106,79 @@ def setup_page(title: str, icon: str = "📦") -> None:
             --cf-accent-soft:rgba(15,118,110,.09);
             --cf-border:rgba(100,116,139,.20);
             --cf-shadow:0 8px 22px rgba(27,62,59,.055);
+            --cf-ink:#183b3a;
+            --cf-muted:#607674;
         }
-        .stApp {background:var(--background-color, #f6f9f8);color:var(--text-color, #183b3a);}
+        .stApp {
+            background:
+                radial-gradient(ellipse at 85% 0%, rgba(15,118,110,.055), transparent 34rem),
+                var(--background-color, #f6f9f8);
+            color:var(--text-color, #183b3a);
+        }
         [data-testid="stAppViewContainer"] .main {background:transparent;}
         .block-container {max-width:1480px;padding:2.4rem 2.6rem 4rem;}
         h1 {letter-spacing:-.035em;font-weight:750;}
         h2, h3 {letter-spacing:-.02em;}
+        .cf-hero {
+            position:relative;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:2rem;
+            overflow:hidden;
+            margin:0 0 1.8rem;
+            padding:2rem 2.2rem;
+            border:1px solid rgba(255,255,255,.14);
+            border-radius:22px;
+            color:#f4fbf8;
+            background:linear-gradient(118deg,#123f3d 0%,#0f766e 60%,#239184 100%);
+            box-shadow:0 16px 38px rgba(15,75,69,.20);
+        }
+        .cf-hero:after {
+            content:"";
+            position:absolute;
+            width:310px;height:310px;
+            right:-80px;top:-180px;
+            border:1px solid rgba(255,255,255,.16);
+            border-radius:50%;
+            box-shadow:0 0 0 28px rgba(255,255,255,.035),0 0 0 58px rgba(255,255,255,.025);
+            pointer-events:none;
+        }
+        .cf-hero-copy {position:relative;z-index:1;max-width:860px;}
+        .cf-hero-eyebrow {
+            display:inline-flex;
+            align-items:center;
+            gap:.45rem;
+            margin-bottom:.72rem;
+            color:#bfe8df;
+            font-size:.70rem;
+            font-weight:750;
+            letter-spacing:.16em;
+            text-transform:uppercase;
+        }
+        .cf-hero-eyebrow:before {
+            content:"";
+            width:7px;height:7px;border-radius:50%;
+            background:#e9bd64;
+            box-shadow:0 0 12px rgba(233,189,100,.8);
+        }
+        .cf-hero h1 {
+            margin:0 0 .58rem;
+            color:#fff;
+            font-size:clamp(1.7rem,3vw,2.5rem);
+            line-height:1.12;
+            letter-spacing:-.045em;
+        }
+        .cf-hero p {margin:0;color:#d9eeea;font-size:.98rem;line-height:1.65;max-width:780px;}
+        .cf-hero-mark {
+            position:relative;z-index:1;
+            display:flex;align-items:baseline;gap:.12rem;
+            padding:.3rem .6rem;
+            color:rgba(255,255,255,.20);
+            font-size:4.7rem;font-weight:800;letter-spacing:-.09em;line-height:1;
+            user-select:none;
+        }
+        .cf-hero-mark span {color:#e9bd64;font-size:1.4rem;letter-spacing:.03em;}
         [data-testid="stSidebar"] {
             background:var(--secondary-background-color, #eef4f2);
             border-right:1px solid var(--cf-border);
@@ -134,6 +202,7 @@ def setup_page(title: str, icon: str = "📦") -> None:
             letter-spacing:-.035em;
         }
         [data-testid="stMetricDelta"] {font-weight:600;}
+        [data-testid="stHorizontalBlock"] [data-testid="stMetric"] {height:100%;min-height:112px;}
         [data-testid="stPlotlyChart"], [data-testid="stDataFrame"] {
             border:1px solid var(--cf-border);
             border-radius:14px;
@@ -143,12 +212,25 @@ def setup_page(title: str, icon: str = "📦") -> None:
         [data-testid="stDataFrame"] {background:var(--secondary-background-color, #ffffff);}
         [data-testid="stAlert"] {border-radius:12px;}
         [data-testid="stCaptionContainer"] {color:var(--text-color, #526466);opacity:.82;}
+        [data-testid="stExpander"] {
+            border:1px solid var(--cf-border);
+            border-radius:12px;
+            background:var(--secondary-background-color, #ffffff);
+        }
+        [data-testid="stRadio"] label[data-baseweb="radio"] {gap:.45rem;}
+        [data-testid="stRadio"] [data-baseweb="radio"] > div:first-child {
+            border-color:var(--cf-accent);
+        }
+        [data-testid="stCheckbox"] label {font-weight:600;}
+        [data-testid="stSelectSlider"] [role="slider"] {background:var(--cf-accent);}
         button[kind="primary"] {background:var(--cf-accent);border-color:var(--cf-accent);}
         input[type="checkbox"] {accent-color:var(--cf-accent);}
         hr {border-color:var(--cf-border);}
         @media (max-width: 800px) {
             .block-container {padding:1.4rem 1rem 3rem;}
             [data-testid="stMetric"] {padding:12px 14px;border-radius:11px;}
+            .cf-hero {padding:1.45rem 1.35rem;border-radius:17px;}
+            .cf-hero-mark {display:none;}
         }
         </style>
         """,
@@ -162,8 +244,21 @@ def setup_page(title: str, icon: str = "📦") -> None:
 
 
 def page_header(title: str, caption: str) -> None:
-    st.title(title)
-    st.caption(caption)
+    safe_title = html.escape(title)
+    safe_caption = html.escape(caption)
+    st.markdown(
+        f"""
+        <header class="cf-hero">
+            <div class="cf-hero-copy">
+                <div class="cf-hero-eyebrow">CommerceFlow 360 · Data intelligence</div>
+                <h1>{safe_title}</h1>
+                <p>{safe_caption}</p>
+            </div>
+            <div class="cf-hero-mark" aria-hidden="true">360<span>°</span></div>
+        </header>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 # ------------------------------------------------------------------ bộ lọc chung
