@@ -1,0 +1,21 @@
+# Theme cố định cho dashboard CommerceFlow 360 (chạy `streamlit run app/Home.py` từ thư mục gốc repo).
+# Khóa base = "light" để giao diện giống nhau dù Windows/trình duyệt đang ở chế độ tối.
+[theme]
+base = "light"
+primaryColor = "#0f766e"
+backgroundColor = "#eef4f2"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#17302f"
+borderColor = "#d5e3df"
+baseRadius = "0.6rem"
+chartCategoricalColors = ["#0f766e", "#d99b22", "#16845b", "#e76f51", "#64748b"]
+
+[theme.sidebar]
+backgroundColor = "#0f3b39"
+secondaryBackgroundColor = "#17504d"
+textColor = "#e3f1ee"
+primaryColor = "#e9bd64"
+borderColor = "#2a625e"
+
+[browser]
+gatherUsageStats = false

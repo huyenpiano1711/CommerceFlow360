@@ -170,6 +170,8 @@ cd ..
 | `data/exports/` | `mart_*.parquet`, `quality_results.parquet` (đầu vào dashboard) |
 | `reports/tables/`, `reports/figures/` | Bảng, hình cho báo cáo |
 | `docs/star_schema/` | Sơ đồ Star Schema, `bus_matrix.md` (grain các fact) |
+| `app/` | Dashboard Streamlit: `Home.py`, `pages/1_Sales.py`…`4_Data_Quality.py`, `services/data_loader.py` (đọc Parquet + tính KPI), `components/ui.py` (giao diện, định dạng số VN) |
+| `.streamlit/config.toml` | Theme cố định của dashboard (luôn sáng, thanh bên tối); chỉ có hiệu lực khi chạy từ thư mục gốc |
 
 ## 9. Quy tắc nghiệp vụ đã chốt (giữ nguyên khi sửa code)
 
@@ -206,5 +208,10 @@ cd ..
 
 - Chạy dashboard từ thư mục gốc sau khi có đủ 4 file trong `data/exports/`: `streamlit run app/Home.py`.
 - Dashboard chỉ đọc Parquet; nếu báo thiếu file, chạy `python scripts/export_parquet.py` trước.
+- Không bấm nút ▶ Run Python File trên `Home.py` (chỉ in cảnh báo, không mở web). Nếu PowerShell chặn `Activate.ps1`, chạy `.\.venv\Scripts\streamlit.exe run app/Home.py`.
+- Sửa `app/components/ui.py` hoặc `services/data_loader.py` xong phải tắt (`Ctrl + C`) và chạy lại Streamlit; chỉ file trang mới tự nạp lại.
+
+Phần chưa làm:
+
 - B02 `01_Data_Profiling_EDA.ipynb` + `reports/figures/Hinh_2.x_*.png`.
 - G01 `07_Run_Full_Pipeline.ipynb` (có thể gọi `src.ingestion.bronze_ingestion.run`, `src.reporting.exports.build_and_export`, `src.reporting.kpi_report.run_all`).
