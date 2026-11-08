@@ -61,7 +61,7 @@ fig = px.bar(show, x="customer_state", y="late_pct",
 fig.update_traces(marker_color=RED, hovertemplate="%{x}<br>Tỷ lệ giao trễ: %{customdata[2]}%<br>Số đơn: %{customdata[0]}<br>Số ngày trễ TB: %{customdata[1]}<extra></extra>")
 fig.update_yaxes(**vn_axis_ticks(show["late_pct"], digits=1))
 fig.add_hline(y=k["late_rate"] * 100, line_dash="dash", line_color="#475569",
-              annotation_text=f"Chung: {fmt_pct(k['late_rate'])}", annotation_position="top right")
+              annotation_text=f"Chung: {fmt_pct(k['late_rate'])}", annotation_position="top left")
 st.plotly_chart(style_fig(fig, 380), **STRETCH)
 st.caption("Khoảng cách địa lý tới trung tâm phân phối là giả thuyết hợp lý nhưng chưa được kiểm chứng trong dữ liệu; cần đối chiếu thêm mật độ người bán theo vùng.")
 
@@ -89,14 +89,18 @@ with right:
                        x="d", nbins=min(cap, 60), labels={"d": "Số ngày từ đặt đến nhận"})
     fig.update_traces(marker_color=BLUE)
     fig.update_layout(yaxis_title="Số đơn", bargap=0.05)
-    fig.update_yaxes(**vn_axis_ticks(el["order_id"].value_counts().values))
+    fig.update_yaxes(**vn_axis_ticks())
     st.plotly_chart(style_fig(fig, 360), **STRETCH)
     st.caption(f"Hiển thị đến ngày thứ {cap} (phân vị 99); các đơn giao lâu hơn vẫn nằm trong KPI nhưng không vẽ để tránh kéo dài trục.")
 
 # ------------------------------------------------------------------ theo tháng
 st.subheader("Tỷ lệ giao trễ theo tháng")
+MIN_MONTH_ORDERS = 30
 by_month = (el.groupby("year_month")
               .agg(orders=("order_id", "count"), late_rate=("is_delivered_late", lambda s: s.astype(int).mean())).reset_index())
+# Tháng quá ít đơn (vd. 09/2016 chỉ 1 đơn -> 100%) kéo trục lên và làm các tháng thật dẹt sát đáy
+small_months = by_month[by_month["orders"] < MIN_MONTH_ORDERS]
+by_month = by_month[by_month["orders"] >= MIN_MONTH_ORDERS]
 by_month["late_label"] = by_month["late_rate"].map(fmt_pct)
 by_month["orders_label"] = by_month["orders"].map(fmt_int)
 fig = go.Figure(go.Scatter(x=by_month["year_month"], y=by_month["late_rate"] * 100, mode="lines+markers", line=dict(color=RED),
@@ -105,6 +109,10 @@ fig = go.Figure(go.Scatter(x=by_month["year_month"], y=by_month["late_rate"] * 1
 fig.update_layout(yaxis_title="Tỷ lệ giao trễ (%)", xaxis=dict(type="category", tickangle=-60))
 fig.update_yaxes(**vn_axis_ticks(by_month["late_rate"] * 100, digits=1))
 st.plotly_chart(style_fig(fig, 320), **STRETCH)
+if not small_months.empty:
+    st.caption(f"Không vẽ các tháng có dưới {MIN_MONTH_ORDERS} đơn đủ điều kiện: "
+               + ", ".join(f"{r.year_month} ({fmt_int(r.orders)} đơn)" for r in small_months.itertuples(index=False))
+               + ". Các đơn này vẫn được tính trong KPI ở trên.")
 
 # ------------------------------------------------------------------ người bán
 st.subheader("Người bán có tỷ lệ giao trễ cao")

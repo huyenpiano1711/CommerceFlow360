@@ -7,7 +7,9 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from components.ui import STRETCH, AMBER, BLUE, GREEN, RED, fmt_int, fmt_money, fmt_num, page_header, setup_page, style_fig
+from components.ui import (
+    STRETCH, AMBER, GREEN, RED, fmt_int, fmt_money, fmt_num, page_header, setup_page, style_fig, vn_axis_ticks,
+)
 from services.data_loader import (
     load_customer, load_delivery, load_quality, load_reconciliation_reference, load_sales,
 )
@@ -66,8 +68,10 @@ with right:
     fig = px.bar(long, x="so_luong", y="loai", color="status", orientation="h", barmode="stack", text="so_luong",
                  color_discrete_map={"pass": GREEN, "warn": AMBER, "fail": RED, "error": RED},
                  labels={"loai": "", "so_luong": "Số test", "status": "Trạng thái"}, title="Số test theo loại")
-    ticks = sorted(long["so_luong"].unique())
-    fig.update_xaxes(tickmode="array", tickvals=ticks, ticktext=[fmt_int(value) for value in ticks])
+    # Vạch trục tự động (0, 10, 20...) thay vì đặt vạch tại từng giá trị (2, 3, 4, 7... chồng lên nhau)
+    fig.update_xaxes(**vn_axis_ticks())
+    fig.update_layout(legend=dict(x=0, xanchor="left", y=1.02, yanchor="bottom", title=None),
+                      title=dict(y=0.98), margin=dict(t=80))
     st.plotly_chart(style_fig(fig, 320), **STRETCH)
 
 # ------------------------------------------------------------------ cảnh báo

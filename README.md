@@ -6,7 +6,7 @@ CommerceFlow 360 là đồ án môn **Nhà kho dữ liệu và Tích hợp**, x�
 
 `Olist CSV + Brazil Holidays → Bronze → Silver → Gold (Star Schema) → Data Mart → Parquet → Streamlit`
 
-Đã hoàn thành: A01–A02 (repository, dữ liệu nguồn), B01 (Bronze), C01–C03 (Silver + dbt test), D02–D04 (Gold + kiểm thử), E01–E05 (Data Mart, phân tích KPI, xuất Parquet). Còn lại: B02 (EDA), F01–F04 (dashboard Streamlit), G01 (notebook chạy toàn bộ pipeline).
+Đã hoàn thành: A01–A02 (repository, dữ liệu nguồn), B01 (Bronze), C01–C03 (Silver + dbt test), D02–D04 (Gold + kiểm thử), E01–E05 (Data Mart, phân tích KPI, xuất Parquet), F01–F04 (dashboard Streamlit). Còn lại: B02 (EDA), G01 (notebook chạy toàn bộ pipeline).
 
 **Hướng dẫn chạy chi tiết, số liệu đối soát và quy tắc nghiệp vụ: xem [AGENTS.md](AGENTS.md).**
 
@@ -28,8 +28,9 @@ Python, Pandas, DuckDB, dbt Core (`dbt-duckdb`), PyArrow, Matplotlib, `holidays`
 
 ```text
 CommerceFlow360/
+├── .streamlit/config.toml  # Theme cố định của dashboard
 ├── analytics/sql/          # 10 truy vấn KPI analysis_<mart>_<nội dung>.sql (E04)
-├── app/                    # Dashboard Streamlit (F01–F04, chưa làm)
+├── app/                    # Dashboard Streamlit F01–F04 (Home.py, pages/, services/, components/)
 ├── data/
 │   ├── raw/                # 9 CSV Olist + holidays_brazil.csv (CHỈ ĐỌC)
 │   ├── reference/          # Metadata nguồn ngày lễ

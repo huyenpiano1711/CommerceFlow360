@@ -1,7 +1,7 @@
 """F01 - Thành phần giao diện dùng chung cho dashboard (Task F01, Phương Anh).
 
 Gồm: cấu hình trang, bộ lọc chung ở thanh bên (giữ nguyên khi đổi trang), định dạng số theo
-kiểu Việt Nam, bảng màu thống nhất với biểu đồ trong báo cáo (Hình 4.2-4.4).
+kiểu Việt Nam, bảng màu teal - gold. Theme nền (sáng, thanh bên tối) đặt ở .streamlit/config.toml.
 """
 from __future__ import annotations
 
@@ -37,6 +37,8 @@ pio.templates["commerceflow"] = go.layout.Template(
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="#526466")),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
+        # Dấu thập phân "," và dấu nghìn "." cho trục/nhãn số, thống nhất với fmt_* bên dưới
+        separators=",.",
     )
 )
 pio.templates.default = "plotly_white+commerceflow"
@@ -71,18 +73,13 @@ def fmt_money_short(x: float) -> str:
     return fmt_money(x)
 
 
-def vn_axis_ticks(values, digits: int = 0) -> dict:
-    """Create readable Vietnamese-formatted Plotly ticks for non-negative measures."""
-    numbers = [float(value) for value in values if value is not None and math.isfinite(float(value))]
-    maximum = max(numbers, default=0)
-    if maximum <= 0:
-        return {}
-    ticks = [maximum * step / 4 for step in range(5)]
-    return {
-        "tickmode": "array",
-        "tickvals": ticks,
-        "ticktext": [fmt_num(value, digits) for value in ticks],
-    }
+def vn_axis_ticks(values=None, digits: int = 0) -> dict:
+    """Định dạng trục số kiểu VN; để Plotly tự chọn vạch tròn (0, 250.000, 500.000...).
+
+    Trước đây vạch được chia đều từ giá trị lớn nhất nên ra số lẻ (752.897, 9,1...).
+    Tham số values giữ lại để không phải sửa nơi gọi.
+    """
+    return {"tickformat": f",.{digits}f"}
 
 
 def fmt_pct(x: float, digits: int = 2) -> str:
@@ -103,128 +100,111 @@ def setup_page(title: str, icon: str = "📦") -> None:
         <style>
         :root {
             --cf-accent:#0f766e;
-            --cf-accent-soft:rgba(15,118,110,.09);
-            --cf-border:rgba(100,116,139,.20);
-            --cf-shadow:0 8px 22px rgba(27,62,59,.055);
-            --cf-ink:#183b3a;
-            --cf-muted:#607674;
+            --cf-accent-2:#14a093;
+            --cf-gold:#e9bd64;
+            --cf-ink:#17302f;
+            --cf-muted:#5b7270;
+            --cf-card:#ffffff;
+            --cf-border:#d5e3df;
+            --cf-shadow:0 1px 2px rgba(15,59,57,.05), 0 10px 26px rgba(15,59,57,.07);
         }
+        /* Nền trang: hai vệt màu mờ + họa tiết chấm rất nhẹ, tránh cảm giác trống trơn */
         .stApp {
-            background:
-                radial-gradient(ellipse at 85% 0%, rgba(15,118,110,.055), transparent 34rem),
-                var(--background-color, #f6f9f8);
-            color:var(--text-color, #183b3a);
+            background-color:#eef4f2;
+            background-image:
+                radial-gradient(ellipse 60rem 30rem at 100% -10%, rgba(20,160,147,.16), transparent 70%),
+                radial-gradient(ellipse 45rem 28rem at -10% 110%, rgba(233,189,100,.14), transparent 70%),
+                radial-gradient(rgba(15,59,57,.07) 1px, transparent 1px);
+            background-size:auto, auto, 22px 22px;
+            background-attachment:fixed;
+            color:var(--cf-ink);
         }
+        [data-testid="stHeader"] {background:transparent;}
         [data-testid="stAppViewContainer"] .main {background:transparent;}
-        .block-container {max-width:1480px;padding:2.4rem 2.6rem 4rem;}
+        .block-container {max-width:1480px;padding:2.2rem 2.6rem 4rem;}
         h1 {letter-spacing:-.035em;font-weight:750;}
-        h2, h3 {letter-spacing:-.02em;}
+        h2, h3 {letter-spacing:-.02em;color:var(--cf-ink);}
+        /* Tiêu đề mục (st.subheader) có vạch nhấn bên trái */
+        [data-testid="stHeadingWithActionElements"] h3 {
+            display:flex;align-items:center;gap:.6rem;margin-top:.6rem;
+        }
+        [data-testid="stHeadingWithActionElements"] h3:before {
+            content:"";flex:0 0 auto;width:5px;height:1.15em;border-radius:3px;
+            background:linear-gradient(180deg,var(--cf-accent-2),var(--cf-accent));
+        }
         .cf-hero {
-            position:relative;
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:2rem;
-            overflow:hidden;
-            margin:0 0 1.8rem;
-            padding:2rem 2.2rem;
-            border:1px solid rgba(255,255,255,.14);
-            border-radius:22px;
-            color:#f4fbf8;
-            background:linear-gradient(118deg,#123f3d 0%,#0f766e 60%,#239184 100%);
-            box-shadow:0 16px 38px rgba(15,75,69,.20);
+            position:relative;display:flex;align-items:center;justify-content:space-between;gap:2rem;
+            overflow:hidden;margin:0 0 1.6rem;padding:2rem 2.2rem;
+            border:1px solid rgba(255,255,255,.14);border-radius:22px;color:#f4fbf8;
+            background:
+                radial-gradient(circle at 92% 18%, rgba(233,189,100,.28), transparent 18rem),
+                linear-gradient(118deg,#0f3b39 0%,#0f766e 58%,#14a093 100%);
+            box-shadow:0 18px 40px rgba(15,75,69,.25);
         }
         .cf-hero:after {
-            content:"";
-            position:absolute;
-            width:310px;height:310px;
-            right:-80px;top:-180px;
-            border:1px solid rgba(255,255,255,.16);
-            border-radius:50%;
+            content:"";position:absolute;width:310px;height:310px;right:-80px;top:-180px;
+            border:1px solid rgba(255,255,255,.16);border-radius:50%;
             box-shadow:0 0 0 28px rgba(255,255,255,.035),0 0 0 58px rgba(255,255,255,.025);
             pointer-events:none;
         }
         .cf-hero-copy {position:relative;z-index:1;max-width:860px;}
         .cf-hero-eyebrow {
-            display:inline-flex;
-            align-items:center;
-            gap:.45rem;
-            margin-bottom:.72rem;
-            color:#bfe8df;
-            font-size:.70rem;
-            font-weight:750;
-            letter-spacing:.16em;
-            text-transform:uppercase;
+            display:inline-flex;align-items:center;gap:.45rem;margin-bottom:.72rem;color:#bfe8df;
+            font-size:.70rem;font-weight:750;letter-spacing:.16em;text-transform:uppercase;
         }
         .cf-hero-eyebrow:before {
-            content:"";
-            width:7px;height:7px;border-radius:50%;
-            background:#e9bd64;
-            box-shadow:0 0 12px rgba(233,189,100,.8);
+            content:"";width:7px;height:7px;border-radius:50%;
+            background:var(--cf-gold);box-shadow:0 0 12px rgba(233,189,100,.8);
         }
         .cf-hero h1 {
-            margin:0 0 .58rem;
-            color:#fff;
-            font-size:clamp(1.7rem,3vw,2.5rem);
-            line-height:1.12;
-            letter-spacing:-.045em;
+            margin:0 0 .58rem;color:#fff;font-size:clamp(1.7rem,3vw,2.5rem);line-height:1.12;letter-spacing:-.045em;
         }
         .cf-hero p {margin:0;color:#d9eeea;font-size:.98rem;line-height:1.65;max-width:780px;}
         .cf-hero-mark {
-            position:relative;z-index:1;
-            display:flex;align-items:baseline;gap:.12rem;
-            padding:.3rem .6rem;
-            color:rgba(255,255,255,.20);
-            font-size:4.7rem;font-weight:800;letter-spacing:-.09em;line-height:1;
+            position:relative;z-index:1;display:flex;align-items:baseline;gap:.12rem;padding:.3rem .6rem;
+            color:rgba(255,255,255,.20);font-size:4.7rem;font-weight:800;letter-spacing:-.09em;line-height:1;
             user-select:none;
         }
-        .cf-hero-mark span {color:#e9bd64;font-size:1.4rem;letter-spacing:.03em;}
+        .cf-hero-mark span {color:var(--cf-gold);font-size:1.4rem;letter-spacing:.03em;}
+        /* Thanh bên tối (màu lấy từ [theme.sidebar] trong .streamlit/config.toml) */
         [data-testid="stSidebar"] {
-            background:var(--secondary-background-color, #eef4f2);
-            border-right:1px solid var(--cf-border);
+            background:linear-gradient(180deg,#0f3b39 0%,#0c302e 100%);
+            border-right:none;box-shadow:4px 0 18px rgba(15,59,57,.12);
         }
-        [data-testid="stSidebar"] h2 {color:var(--text-color, #183b3a);}
+        [data-testid="stSidebar"] h2 {color:#ffffff;}
+        [data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+        [data-testid="stSidebar"] [data-testid="stCaptionContainer"] * {color:rgba(227,241,238,.80)!important;}
+        [data-testid="stSidebar"] [data-testid="stAlert"] {background:rgba(255,255,255,.07);border:1px solid rgba(233,189,100,.35);}
+        [data-testid="stSidebar"] [data-testid="stAlert"] * {color:#f1f7f5!important;}
+        [data-testid="stSidebarNav"] a[aria-current="page"] {background:rgba(233,189,100,.16);}
+        /* Thẻ KPI */
         [data-testid="stMetric"] {
-            background:var(--secondary-background-color, #ffffff);
-            color:var(--text-color, #183b3a);
-            border:1px solid var(--cf-border);
-            border-left:3px solid var(--cf-accent);
-            border-radius:14px;
-            padding:16px 18px;
-            box-shadow:var(--cf-shadow);
+            position:relative;overflow:hidden;
+            background:var(--cf-card);color:var(--cf-ink);
+            border:1px solid var(--cf-border);border-radius:14px;
+            padding:16px 18px 14px;box-shadow:var(--cf-shadow);
             transition:transform .16s ease, box-shadow .16s ease;
         }
-        [data-testid="stMetric"]:hover {transform:translateY(-2px);box-shadow:0 12px 26px rgba(27,62,59,.11);}
-        [data-testid="stMetricLabel"] p {font-size:.82rem;font-weight:600;color:var(--text-color, #526466);opacity:.78;}
+        [data-testid="stMetric"]:before {
+            content:"";position:absolute;left:0;top:0;right:0;height:3px;
+            background:linear-gradient(90deg,var(--cf-accent),var(--cf-accent-2) 60%,var(--cf-gold));
+        }
+        [data-testid="stMetric"]:hover {transform:translateY(-2px);box-shadow:0 14px 30px rgba(15,59,57,.13);}
+        [data-testid="stMetricLabel"] p {font-size:.8rem;font-weight:650;color:var(--cf-muted);}
+        /* Số tiền dài ("R$ 13,45 triệu") không bị cắt "...": thu nhỏ theo bề rộng và cho xuống dòng */
         [data-testid="stMetricValue"], [data-testid="stMetricValue"] div {
-            color:var(--text-color, #183b3a)!important;
-            font-weight:750;
-            letter-spacing:-.035em;
+            color:var(--cf-ink)!important;font-weight:750;letter-spacing:-.03em;
+            font-size:clamp(1.4rem,2.1vw,2.1rem);
+            white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.2;
         }
-        [data-testid="stMetricDelta"] {font-weight:600;}
-        [data-testid="stHorizontalBlock"] [data-testid="stMetric"] {height:100%;min-height:112px;}
+        [data-testid="stHorizontalBlock"] [data-testid="stMetric"] {height:100%;min-height:104px;}
         [data-testid="stPlotlyChart"], [data-testid="stDataFrame"] {
-            border:1px solid var(--cf-border);
-            border-radius:14px;
-            overflow:hidden;
-            box-shadow:var(--cf-shadow);
+            background:var(--cf-card);border:1px solid var(--cf-border);border-radius:14px;
+            overflow:hidden;box-shadow:var(--cf-shadow);padding:6px 6px 0;
         }
-        [data-testid="stDataFrame"] {background:var(--secondary-background-color, #ffffff);}
         [data-testid="stAlert"] {border-radius:12px;}
-        [data-testid="stCaptionContainer"] {color:var(--text-color, #526466);opacity:.82;}
-        [data-testid="stExpander"] {
-            border:1px solid var(--cf-border);
-            border-radius:12px;
-            background:var(--secondary-background-color, #ffffff);
-        }
-        [data-testid="stRadio"] label[data-baseweb="radio"] {gap:.45rem;}
-        [data-testid="stRadio"] [data-baseweb="radio"] > div:first-child {
-            border-color:var(--cf-accent);
-        }
-        [data-testid="stCheckbox"] label {font-weight:600;}
-        [data-testid="stSelectSlider"] [role="slider"] {background:var(--cf-accent);}
-        button[kind="primary"] {background:var(--cf-accent);border-color:var(--cf-accent);}
-        input[type="checkbox"] {accent-color:var(--cf-accent);}
+        [data-testid="stCaptionContainer"] {color:#566d6b;}
+        [data-testid="stExpander"] {border:1px solid var(--cf-border);border-radius:12px;background:var(--cf-card);}
         hr {border-color:var(--cf-border);}
         @media (max-width: 800px) {
             .block-container {padding:1.4rem 1rem 3rem;}

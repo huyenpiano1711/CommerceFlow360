@@ -8,7 +8,7 @@ import streamlit as st
 
 from components.ui import (
     STRETCH,
-    AMBER, BLUE, empty_guard, fmt_int, fmt_money_short, fmt_num, fmt_pct, fmt_pct_points, page_header,
+    AMBER, BLUE, empty_guard, fmt_int, fmt_money, fmt_money_short, fmt_num, fmt_pct, fmt_pct_points, page_header,
     setup_page, vn_axis_ticks,
 )
 from services.data_loader import customer_kpis, load_customer, recency_distribution, spend_quartiles
@@ -77,13 +77,15 @@ fig.update_traces(marker_color=BLUE, textposition="outside",
 fig.update_yaxes(range=[0, max(seg["pct_revenue"]) * 1.15])
 fig.update_yaxes(**vn_axis_ticks(seg["pct_revenue"], digits=1))
 st.plotly_chart(fig.update_layout(height=380), **STRETCH)
-seg_display = seg.rename(
+# Bỏ các cột *_label (chỉ dùng cho hover của biểu đồ) khỏi bảng hiển thị
+seg_display = seg.drop(columns=["customer_count_label", "min_spend_label", "max_spend_label"]).rename(
     columns={"spend_quartile": "Quartile", "customer_count": "Số khách", "min_spend": "Chi tiêu thấp nhất (R$)",
              "max_spend": "Chi tiêu cao nhất (R$)", "total_spend_segment": "Tổng chi tiêu (R$)", "pct_revenue": "% tổng chi tiêu"}
 ).copy()
 seg_display["Số khách"] = seg_display["Số khách"].map(fmt_int)
-for column in ["Chi tiêu thấp nhất (R$)", "Chi tiêu cao nhất (R$)", "Tổng chi tiêu (R$)"]:
-    seg_display[column] = seg_display[column].map(fmt_money_short)
+for column in ["Chi tiêu thấp nhất (R$)", "Chi tiêu cao nhất (R$)"]:
+    seg_display[column] = seg_display[column].map(fmt_money)
+seg_display["Tổng chi tiêu (R$)"] = seg_display["Tổng chi tiêu (R$)"].map(fmt_money_short)
 seg_display["% tổng chi tiêu"] = seg_display["% tổng chi tiêu"].map(fmt_num)
 st.dataframe(seg_display, hide_index=True, **STRETCH)
 st.caption("Chỉ gồm khách có tổng chi tiêu > 0. Thể hiện mức độ tập trung doanh thu, không phải dự báo giá trị khách hàng.")

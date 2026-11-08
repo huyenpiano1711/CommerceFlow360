@@ -60,7 +60,8 @@ k1, k2, k3, k4 = st.columns(4)
 k1.metric("Khách hàng (customer_unique_id)", fmt_int(ck["customers"]), help="Khách có ít nhất 1 đơn hợp lệ.")
 k2.metric("Khách mua lại (≥ 2 đơn)", fmt_int(ck["repeat_customers"]))
 k3.metric("Tỷ lệ mua lại", fmt_pct(ck["repeat_rate"]))
-k4.metric("Chi tiêu TB: mua lại vs 1 lần", f'{fmt_money_short(ck["avg_spend_repeat"])} vs {fmt_money_short(ck["avg_spend_single"])}',
+# Không để hai "R$" trong cùng giá trị: st.metric hiểu "$...$" là công thức LaTeX và hiện sai
+k4.metric("Chi tiêu TB (R$): mua lại vs 1 lần", f'{fmt_num(ck["avg_spend_repeat"])} vs {fmt_num(ck["avg_spend_single"])}',
           help="Tổng payment_value trung bình mỗi khách (R$), đơn hợp lệ.")
 st.caption("Chỉ số khách hàng tính theo customer_unique_id trên toàn bộ dữ liệu; mart_customer không có chiều bang/danh mục/tháng "
            "nên không chịu tác động của bộ lọc chung.")
@@ -83,9 +84,12 @@ fig.add_scatter(
 )
 fig.update_layout(
     yaxis=dict(title="Doanh thu (R$)", **vn_axis_ticks(monthly["revenue"])),
-    yaxis2=dict(title="Số đơn", overlaying="y", side="right", showgrid=False,
+    # tickmode="auto": trục phụ tự chọn vạch tròn thay vì đồng bộ theo vạch trục chính (ra số lẻ 7.256, 5.726...)
+    yaxis2=dict(title="Số đơn", overlaying="y", side="right", showgrid=False, tickmode="auto", rangemode="tozero",
                 **vn_axis_ticks(monthly["orders"])),
+    yaxis_rangemode="tozero",
     xaxis=dict(type="category", tickangle=-60),
+    margin=dict(r=70),
 )
 st.plotly_chart(style_fig(fig, 360), **STRETCH)
 partial_months = (sales_all.groupby("year_month")["order_id"].nunique().rename("orders").reset_index())
