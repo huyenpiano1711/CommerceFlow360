@@ -11,12 +11,20 @@
 -- đếm cả đơn hủy nên khách chỉ có 1 đơn thật + 1 đơn hủy bị tính là "khách mua lại".
 -- Khách không có đơn hợp lệ nào vẫn giữ trong mart (has_valid_order = false) để đối soát với dim_customer,
 -- nhưng phải lọc has_valid_order khi tính tỷ lệ mua lại, recency, phân khúc chi tiêu.
+--
+-- QUY TẮC tổng chi tiêu: total_spend = tổng payment_value có trong nguồn của các đơn hợp lệ.
+-- Đơn hợp lệ không có dòng thanh toán nào (nguồn thiếu dữ liệu) vẫn được đếm trong order_count nhưng
+-- góp 0 vào total_spend - không tự suy ra số tiền từ giá hàng. Số đơn này ghi ở orders_without_payment
+-- để đối soát (tests/test_mart_reconciliation.sql). Khách của thanh toán lấy theo fact_orders.customer_key.
 with orders_with_date as (
     select
         orders.customer_key,
         orders.order_id,
         orders.is_valid_order,
-        order_date.full_date as order_purchase_date
+        order_date.full_date as order_purchase_date,
+        exists (
+            select 1 from {{ ref('fact_payments') }} as payments where payments.order_id = orders.order_id
+        ) as has_payment
     from {{ ref('fact_orders') }} as orders
     left join {{ ref('dim_date') }} as order_date
         on orders.purchase_date_key = order_date.date_key
@@ -28,6 +36,8 @@ customer_orders as (
         customer_key,
         count(distinct order_id)                                    as order_count_all_status,
         count(distinct order_id) filter (where is_valid_order)      as order_count,
+        count(distinct order_id) filter (where is_valid_order and not has_payment)
+                                                                    as orders_without_payment,
         min(order_purchase_date) filter (where is_valid_order)      as first_order_date,
         max(order_purchase_date) filter (where is_valid_order)      as last_order_date
     from orders_with_date
@@ -36,14 +46,14 @@ customer_orders as (
 
 customer_spend as (
     select
-        payments.customer_key,
+        orders.customer_key,
         sum(payments.payment_value) as total_spend
     from {{ ref('fact_payments') }} as payments
     join {{ ref('fact_orders') }} as orders
         on payments.order_id = orders.order_id
-    where payments.customer_key is not null
+    where orders.customer_key is not null
       and orders.is_valid_order
-    group by payments.customer_key
+    group by orders.customer_key
 ),
 
 snapshot as (
@@ -56,6 +66,7 @@ select
     customer.customer_unique_id,
     coalesce(orders.order_count, 0)               as order_count,
     coalesce(orders.order_count_all_status, 0)    as order_count_all_status,
+    coalesce(orders.orders_without_payment, 0)    as orders_without_payment,
     coalesce(spend.total_spend, 0)                as total_spend,
     orders.first_order_date,
     orders.last_order_date,

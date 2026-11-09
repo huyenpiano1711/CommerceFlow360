@@ -6,6 +6,11 @@
 -- chỉ số ở cấp đơn nên lặp lại trên các dòng seller của cùng một đơn - khi gộp toàn mart cần
 -- dùng count(distinct order_id) chứ không phải count(*), và review_score chỉ tính 1 lần/đơn
 -- (đã lọc is_latest_review ở fact_reviews) nên cũng bị lặp theo seller vì lý do tương tự.
+--
+-- QUY ƯỚC review theo người bán: Olist chỉ cho khách đánh giá cả đơn, không đánh giá từng người bán.
+-- Đơn nhiều người bán thì mọi người bán của đơn nhận CHUNG điểm review đó (không chia, không suy ra
+-- điểm riêng). Điểm TB theo người bán vì vậy là "điểm của các đơn người bán tham gia".
+-- Khi tính điểm TB toàn bộ / theo bang phải khử trùng theo order_id trước.
 with order_sellers as (
     select distinct
         order_id,

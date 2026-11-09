@@ -73,4 +73,4 @@ Kết quả lần chạy gần nhất: `docs/data_quality/silver_test_results.cs
 - `models/gold/facts/`: `fact_orders`, `fact_order_items`, `fact_payments`, `fact_reviews` (grain: `docs/star_schema/bus_matrix.md`).
 - `models/gold/marts/`: `mart_sales`, `mart_delivery`, `mart_customer` + `schema.yml`.
 - Test Gold: `test_gold_fact_grain`, `test_gold_dimension_relationships`, `test_sales_reconciliation` (Bronze → Silver → Gold),
-  `test_mart_reconciliation` (Gold → Mart). `dbt build` toàn bộ: 22 model + 89 test, kết quả mong đợi `PASS=106 WARN=5 ERROR=0`.
+  `test_mart_reconciliation` (Gold → Mart). `dbt build` toàn bộ: 22 model + 91 test, kết quả mong đợi `PASS=108 WARN=5 ERROR=0`.

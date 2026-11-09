@@ -2,9 +2,12 @@
 
 Nạp 9 CSV Olist + holidays_brazil.csv thành 10 bảng bronze_*:
   * giữ nguyên dữ liệu nguồn: mọi cột đọc dạng VARCHAR (all_varchar), không đổi tên cột, không xóa dòng;
-  * bổ sung 2 cột metadata: _ingested_at (thời điểm nạp) và _source_file (tên file nguồn);
+  * bổ sung 2 cột metadata: _ingested_at (thời điểm nạp, UTC) và _source_file (tên file nguồn);
   * ghi nhật ký vào bảng ingestion_log: số dòng trong CSV (đếm độc lập bằng module csv),
     số dòng đã nạp, trạng thái khớp/không khớp, thời điểm nạp.
+
+Toàn bộ lần nạp chạy trong MỘT transaction: nếu một file lỗi hoặc số dòng không khớp,
+mọi thay đổi bị rollback, các bảng bronze_* và ingestion_log giữ nguyên trạng thái của lần nạp trước.
 
 Quy tắc tên bảng: bronze_<tên bảng gốc>, bỏ tiền tố olist_ và hậu tố _dataset.
 Silver đọc các bảng này qua source('bronze', ...) trong dbt_project/models/sources.yml.
@@ -36,17 +39,27 @@ RAW_FILES = {
     "bronze_holidays": "holidays_brazil.csv",
 }
 
+LOG_COLUMNS = ["table_name", "source_file", "csv_rows", "loaded_rows", "column_count", "status", "ingested_at"]
+
+# Ô review_comment_message có thể dài hơn giới hạn mặc định 128 KB của module csv.
+# Trên Windows, C long chỉ 32 bit nên không đặt được sys.maxsize.
+_CSV_FIELD_LIMIT = min(sys.maxsize, 2**31 - 1)
+
 
 def count_csv_rows(path: Path) -> int:
     """Đếm số bản ghi bằng module csv (xử lý đúng ô có xuống dòng trong review)."""
-    csv.field_size_limit(sys.maxsize if sys.maxsize < 2**31 else 2**31 - 1)
-    with path.open(encoding="utf-8", newline="") as f:
-        reader = csv.reader(f)
-        next(reader, None)  # bỏ dòng tiêu đề
-        return sum(1 for _ in reader)
+    previous_limit = csv.field_size_limit(_CSV_FIELD_LIMIT)
+    try:
+        with path.open(encoding="utf-8", newline="") as f:
+            reader = csv.reader(f)
+            next(reader, None)  # bỏ dòng tiêu đề
+            return sum(1 for _ in reader)
+    finally:
+        csv.field_size_limit(previous_limit)
 
 
 def run(project_root: Path | str, duckdb_path: Path | str | None = None) -> pd.DataFrame:
+    """Nạp 10 bảng bronze_*; trả về nhật ký nạp. Lỗi hoặc lệch số dòng -> rollback và RuntimeError."""
     project_root = Path(project_root)
     raw_dir = project_root / "data" / "raw"
     duckdb_path = Path(duckdb_path or os.environ.get("DUCKDB_PATH", project_root / "commerceflow.duckdb"))
@@ -54,6 +67,9 @@ def run(project_root: Path | str, duckdb_path: Path | str | None = None) -> pd.D
     missing = [f for f in RAW_FILES.values() if not (raw_dir / f).is_file()]
     if missing:
         raise FileNotFoundError(f"Thiếu file nguồn trong data/raw: {missing}")
+
+    # Đếm độc lập trước khi mở transaction để transaction ngắn nhất có thể.
+    csv_counts = {table: count_csv_rows(raw_dir / filename) for table, filename in RAW_FILES.items()}
 
     batch_ts = datetime.now(timezone.utc).replace(tzinfo=None)
     logs = []
@@ -69,32 +85,40 @@ def run(project_root: Path | str, duckdb_path: Path | str | None = None) -> pd.D
                 ingested_at    timestamp
             )
         """)
-        for table, filename in RAW_FILES.items():
-            src = (raw_dir / filename).as_posix()
+        con.begin()
+        try:
+            for table, filename in RAW_FILES.items():
+                src = (raw_dir / filename).as_posix()
+                # Tên bảng lấy từ hằng RAW_FILES ở trên (không phải dữ liệu người dùng) nên ghép f-string an toàn.
+                con.execute(
+                    f"""
+                    create or replace table {table} as
+                    select *,
+                           cast(? as timestamp) as _ingested_at,
+                           cast(? as varchar)   as _source_file
+                    from read_csv(?, all_varchar = true, header = true)
+                    """,
+                    [batch_ts, filename, src],
+                )
+                loaded = con.execute(f"select count(*) from {table}").fetchone()[0]
+                n_cols = len(con.execute(f"select * from {table} limit 0").description) - 2
+                status = "PASS" if loaded == csv_counts[table] else "FAIL"
+                logs.append((table, filename, csv_counts[table], loaded, n_cols, status, batch_ts))
+
+            result = pd.DataFrame(logs, columns=LOG_COLUMNS)
+            if (result["status"] != "PASS").any():
+                raise RuntimeError("Số dòng nạp vào Bronze không khớp CSV:\n" + result.to_string(index=False))
+
+            # Bảng bronze_* bị create or replace mỗi lần nạp, nên log chỉ giữ lần nạp hiện tại của các bảng này.
             con.execute(
-                f"""
-                create or replace table {table} as
-                select *,
-                       cast(? as timestamp) as _ingested_at,
-                       cast(? as varchar)   as _source_file
-                from read_csv(?, all_varchar = true, header = true)
-                """,
-                [batch_ts, filename, src],
+                f"delete from ingestion_log where table_name in ({', '.join('?' * len(RAW_FILES))})",
+                list(RAW_FILES),
             )
-            loaded = con.execute(f"select count(*) from {table}").fetchone()[0]
-            n_cols = len(con.execute(f"select * from {table} limit 0").description) - 2
-            csv_rows = count_csv_rows(raw_dir / filename)
-            status = "PASS" if loaded == csv_rows else "FAIL"
-            logs.append((table, filename, csv_rows, loaded, n_cols, status, batch_ts))
-
-        con.executemany("insert into ingestion_log values (?, ?, ?, ?, ?, ?, ?)", logs)
-
-    result = pd.DataFrame(
-        logs,
-        columns=["table_name", "source_file", "csv_rows", "loaded_rows", "column_count", "status", "ingested_at"],
-    )
-    if (result["status"] != "PASS").any():
-        raise RuntimeError("Số dòng nạp vào Bronze không khớp CSV:\n" + result.to_string(index=False))
+            con.executemany("insert into ingestion_log values (?, ?, ?, ?, ?, ?, ?)", logs)
+            con.commit()
+        except Exception:
+            con.rollback()
+            raise
     return result
 
 

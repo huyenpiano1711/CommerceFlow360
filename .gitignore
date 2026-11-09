@@ -27,6 +27,8 @@ dbt_project/target/
 dbt_project/logs/
 dbt_project/dbt_packages/
 dbt_project/.user.yml
+# profiles.yml thật (src/utils/project.py tự tạo khi ~/.dbt/profiles.yml thiếu profile commerceflow360)
+dbt_project/profiles.yml
 
 # Generated/intermediate data (raw Olist CSV files are intentionally tracked)
 data/exports/*
@@ -37,6 +39,7 @@ data/exports/*
 !data/exports/quality_results.parquet
 data/reference/*.tmp
 data/profiling/*.tmp
+data/exports/*.tmp
 
 # Build and test caches
 .pytest_cache/

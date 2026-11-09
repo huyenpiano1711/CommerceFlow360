@@ -12,8 +12,8 @@ from components.ui import (
     page_header, setup_page, sidebar_filters, style_fig, vn_axis_ticks,
 )
 from services.data_loader import (
-    FULL_MONTH_END, FULL_MONTH_START, customer_kpis, delivery_kpis, filter_delivery, filter_sales,
-    load_customer, load_delivery, load_quality, load_sales, sales_kpis,
+    customer_kpis, delivery_kpis, filter_delivery, filter_sales,
+    load_customer, load_delivery, load_quality, load_sales, partial_month_summary, sales_kpis,
 )
 
 setup_page("Tổng quan", "📦")
@@ -54,6 +54,9 @@ d1.metric("Tỷ lệ giao trễ", fmt_pct(dk["late_rate"]), help="Số đơn del
 d2.metric("Số ngày giao TB", fmt_num(dk["avg_delivery_days"], 1), help="Từ ngày đặt đến ngày khách nhận, đơn delivered đủ điều kiện.")
 d3.metric("Điểm đánh giá TB", fmt_num(dk["avg_review"]), help="Đánh giá mới nhất của mỗi đơn (thang 1–5).")
 d4.metric("Đơn đủ điều kiện", fmt_int(dk["eligible_orders"]))
+if filters.categories:
+    st.caption("Chỉ số giao hàng chỉ theo bộ lọc tháng và bang: mart_delivery không có chiều danh mục "
+               "nên bộ lọc danh mục không áp dụng cho nhóm này.")
 
 st.subheader("Khách hàng (toàn bộ dữ liệu)")
 k1, k2, k3, k4 = st.columns(4)
@@ -92,13 +95,7 @@ fig.update_layout(
     margin=dict(r=70),
 )
 st.plotly_chart(style_fig(fig, 360), **STRETCH)
-partial_months = (sales_all.groupby("year_month")["order_id"].nunique().rename("orders").reset_index())
-partial_months = partial_months[
-    (partial_months["year_month"] < FULL_MONTH_START) | (partial_months["year_month"] > FULL_MONTH_END)
-]
-partial_summary = ", ".join(
-    f"{row.year_month} ({fmt_int(row.orders)} đơn)" for row in partial_months.itertuples(index=False)
-)
+partial_summary = partial_month_summary(sales_all)
 if partial_summary:
     st.caption(f"Các tháng ngoài giai đoạn đầy đủ trong dữ liệu: {partial_summary}. "
                "Có thể bật/tắt “Chỉ các tháng đầy đủ” ở thanh bên để đưa chúng vào/loại khỏi biểu đồ.")
@@ -120,8 +117,9 @@ with st.expander("Định nghĩa KPI dùng trong dashboard"):
         - **Doanh thu** = tổng `price` của dòng hàng thuộc đơn hợp lệ; **phí vận chuyển** và **giá trị thanh toán** là measure riêng, không cộng lẫn.
         - **Số đơn** = `count(distinct order_id)`; không cộng số đơn giữa các danh mục hoặc người bán.
         - **AOV** = doanh thu / số đơn hợp lệ.
-        - **Tỷ lệ giao trễ** = đơn `delivered` giao sau ngày dự kiến / đơn `delivered` có đủ hai mốc thời gian (so sánh theo ngày). `mart_delivery` có grain (đơn, người bán) nên được khử trùng theo `order_id` trước khi tính.
-        - **Đánh giá**: lấy đánh giá mới nhất của mỗi đơn.
+        - **Tỷ lệ giao trễ** = đơn `delivered` giao sau ngày dự kiến / đơn `delivered` có đủ hai mốc thời gian (so sánh theo ngày). Số đơn theo bang/người bán cũng đếm trên đúng tập này. `mart_delivery` có grain (đơn, người bán) nên được khử trùng theo `order_id` trước khi tính.
+        - **Đánh giá**: lấy đánh giá mới nhất của mỗi đơn. Olist đánh giá theo đơn, nên đơn nhiều người bán thì mọi người bán nhận chung điểm đó.
         - **Khách hàng**: dùng `customer_unique_id`; chỉ tính khách có đơn hợp lệ. Recency tính đến ngày đặt hàng lớn nhất trong dữ liệu (không phải ngày hiện tại).
+        - **Chi tiêu khách** = tổng `payment_value` khách thực trả (gồm phí vận chuyển), khác với doanh thu `price`. Đơn không có dòng thanh toán trong nguồn góp 0, không tự suy số tiền.
         """
     )

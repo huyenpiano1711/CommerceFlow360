@@ -1,0 +1,7 @@
+﻿chi_so,so_don
+Đơn có từ 2 dòng hàng,9803
+Đơn có từ 2 dòng thanh toán,2961
+Đơn có từ 2 đánh giá,547
+Đơn không có dòng hàng,775
+Số dòng khi nối thẳng order_items với payments,117601
+customer_unique_id gắn với nhiều customer_id,2997

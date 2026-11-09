@@ -1,7 +1,7 @@
 """Tiện ích dùng chung cho script và notebook CommerceFlow 360.
 
 Gom một chỗ những việc trước đây mỗi notebook tự viết lại: xác định thư mục gốc,
-đường dẫn DuckDB, chép profile dbt, chạy lệnh dbt, truy vấn chỉ đọc và đọc kết quả kiểm thử dbt.
+đường dẫn DuckDB, chuẩn bị profile dbt, chạy lệnh dbt, truy vấn chỉ đọc và đọc kết quả kiểm thử dbt.
 
 Khi import, module đặt biến môi trường DUCKDB_PATH để mọi lệnh dbt (profiles.yml đọc
 env_var('DUCKDB_PATH')) và mọi kết nối DuckDB dùng chung một file.
@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -25,16 +26,46 @@ EXPORT_DIR = PROJECT_ROOT / "data" / "exports"
 TABLE_DIR = PROJECT_ROOT / "reports" / "tables"
 FIGURE_DIR = PROJECT_ROOT / "reports" / "figures"
 
+DBT_PROFILE_NAME = "commerceflow360"  # trùng khóa `profile:` trong dbt_project/dbt_project.yml
+PROFILE_TEMPLATE = DBT_DIR / "profiles.yml.example"
+LOCAL_PROFILE = DBT_DIR / "profiles.yml"  # bản dự phòng trong repo, đã khai báo trong .gitignore
+
 os.environ["DUCKDB_PATH"] = str(DUCKDB_PATH)
 
 
+def _has_profile(path: Path) -> bool:
+    """File profiles.yml có khai báo profile commerceflow360 ở cấp ngoài cùng hay không."""
+    if not path.is_file():
+        return False
+    text = path.read_text(encoding="utf-8", errors="replace")
+    return re.search(rf"^{DBT_PROFILE_NAME}\s*:", text, flags=re.MULTILINE) is not None
+
+
 def ensure_dbt_profile() -> Path:
-    """Chép profiles.yml.example vào ~/.dbt/profiles.yml nếu máy chưa có profile."""
-    target = Path.home() / ".dbt" / "profiles.yml"
-    if not target.exists():
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(DBT_DIR / "profiles.yml.example", target)
-    return target
+    """Bảo đảm dbt tìm được profile commerceflow360; trả về file profiles.yml dbt sẽ dùng.
+
+    * Đã đặt DBT_PROFILES_DIR và file ở đó có profile -> dùng nguyên.
+    * Máy chưa có ~/.dbt/profiles.yml -> chép profiles.yml.example vào đó (đúng hướng dẫn README).
+    * ~/.dbt/profiles.yml đã có nhưng thiếu profile commerceflow360 (máy dùng dbt cho dự án khác)
+      -> KHÔNG sửa file của người dùng; chép mẫu thành dbt_project/profiles.yml và đặt
+      DBT_PROFILES_DIR trỏ tới dbt_project/ cho các lệnh dbt chạy từ tiến trình này.
+    """
+    env_dir = os.environ.get("DBT_PROFILES_DIR")
+    if env_dir and _has_profile(Path(env_dir) / "profiles.yml"):
+        return Path(env_dir) / "profiles.yml"
+
+    home_profile = Path.home() / ".dbt" / "profiles.yml"
+    if not home_profile.exists():
+        home_profile.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(PROFILE_TEMPLATE, home_profile)
+        return home_profile
+    if _has_profile(home_profile):
+        return home_profile
+
+    if not _has_profile(LOCAL_PROFILE):
+        shutil.copy(PROFILE_TEMPLATE, LOCAL_PROFILE)
+    os.environ["DBT_PROFILES_DIR"] = str(DBT_DIR)
+    return LOCAL_PROFILE
 
 
 def dbt_executable() -> str:
@@ -56,6 +87,8 @@ def run_dbt(*args: str, check: bool = True, tail: int = 6000) -> subprocess.Comp
     dbt trả exit 0 khi chỉ có test WARN; exit khác 0 nghĩa là có model lỗi hoặc test FAIL.
     check=True thì dừng ngay trong trường hợp đó.
     """
+    if not args:
+        raise ValueError("Cần truyền lệnh dbt, ví dụ run_dbt('build').")
     ensure_dbt_profile()
     cmd = [dbt_executable(), *args, "--no-use-colors"]
     print("$ dbt", " ".join(args))
@@ -81,7 +114,10 @@ def query(sql: str) -> pd.DataFrame:
 
 
 def load_test_results() -> pd.DataFrame:
-    """Kết quả các test trong lần chạy dbt gần nhất (target/run_results.json).
+    """Kết quả các test trong lần chạy dbt GẦN NHẤT (target/run_results.json).
+
+    run_results.json bị ghi đè sau mỗi lệnh dbt, nên kết quả chỉ gồm các test của lệnh đó:
+    sau `dbt test -s silver` là test Silver, sau `dbt build` là toàn bộ test.
 
     unique_id của test có dạng test.<project>.<tên test>[.<hash>] nên tên test luôn ở vị trí 2
     (lấy vị trí -2 sẽ sai với test tùy chỉnh, vốn không có hash).

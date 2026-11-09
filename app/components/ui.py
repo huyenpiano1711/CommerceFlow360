@@ -277,6 +277,9 @@ def sidebar_filters(*, use_category: bool = True, use_state: bool = True) -> Fil
     _save("range", (start, end))
     if full_only:
         start, end = max(start, FULL_MONTH_START), min(end, FULL_MONTH_END)
+        if start > end:
+            st.sidebar.warning("Khoảng thời gian đã chọn nằm hoàn toàn ngoài giai đoạn tháng đầy đủ. "
+                               "Tắt “Chỉ các tháng đầy đủ” hoặc chọn lại khoảng thời gian.")
 
     chosen_states: tuple[str, ...] = ()
     if use_state:
