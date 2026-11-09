@@ -30,9 +30,9 @@ Tài liệu này xác định grain của bốn fact và các dimension dùng ch
 
 - **Customer:** `dim_customer` có một dòng cho mỗi `customer_unique_id` và khóa thay thế `customer_key`. Từ fact, ánh xạ qua `customer_id` của đơn hàng sang `customer_unique_id`; giữ `source_customer_id` nếu cần truy vết. Không dùng `customer_id` để đếm khách quay lại.
 - **Product và Seller:** chỉ gắn với `fact_order_items`, vì nguồn xác định sản phẩm và người bán tại grain dòng hàng.
-- **Date:** `dim_date` là role-playing dimension, được tham chiếu nhiều lần bằng các khóa như `purchase_date_key`, `delivered_date_key` và `review_creation_date_key`. Ngày không có trong nguồn được để khóa NULL hoặc ánh xạ tới một dòng Unknown thống nhất theo quyết định triển khai; không được tự gán một ngày thật.
+- **Date:** `dim_date` là role-playing dimension, được tham chiếu nhiều lần bằng các khóa như `purchase_date_key`, `delivered_date_key` và `review_creation_date_key`. Ngày không có trong nguồn (vd. đơn chưa giao) để khóa NULL, không dùng dòng Unknown và không tự gán một ngày thật. Lịch `dim_date` tự mở rộng theo ngày nhỏ nhất/lớn nhất của mọi cột ngày mà fact tham chiếu (làm tròn ra đầu/cuối năm), nên không có khóa ngày nào bị rơi.
 - **Payment date:** dữ liệu Olist không cung cấp ngày thanh toán. `fact_payments.purchase_date_key`, nếu dùng, là ngày mua của đơn liên quan, không phải ngày thanh toán.
-- **Geography:** `dim_geography` dự kiến có grain một dòng cho mỗi ZIP prefix đã chuẩn hóa. Vì nguồn geolocation có nhiều bản ghi cho cùng ZIP prefix, cần quy tắc xác định để tạo một vị trí đại diện. Địa lý khách hàng/người bán được xác định theo thông tin địa chỉ của giao dịch.
+- **Geography:** `dim_geography` có grain một dòng cho mỗi ZIP prefix 5 ký tự. Tọa độ, thành phố, bang lấy từ `silver_geolocation` (đã gộp ~1 triệu dòng về 1 dòng/ZIP: trung vị tọa độ trong lãnh thổ Brazil, thành phố/bang phổ biến nhất). ZIP của khách hàng/người bán không có trong geolocation lấy thành phố/bang từ chính địa chỉ khách hàng/người bán (`location_source = 'customer_seller_address'`), tọa độ để NULL.
 - **Các dimension còn lại:** `dim_product`, `dim_seller` và `dim_geography` dùng khóa thay thế; các mã nguồn như `product_id`, `seller_id` và ZIP prefix được giữ làm natural key để tra cứu.
 
 ## Quy tắc bảo toàn grain và KPI
@@ -41,7 +41,11 @@ Tài liệu này xác định grain của bốn fact và các dimension dùng ch
 2. Khi cần kết hợp số liệu từ nhiều fact, tổng hợp từng fact về grain phân tích chung (thường là `order_id`, tháng hoặc nhóm dimension) trước, rồi mới kết hợp kết quả.
 3. Phân biệt `item_price` (giá sản phẩm), `freight_value` (phí vận chuyển) và `payment_value` (giá trị dòng thanh toán). Không xem chúng là cùng một measure hoặc cộng sau một phép join có thể nhân bản dòng.
 4. `order_count` và `item_count` là measure đếm cộng được ở grain tương ứng; chỉ cộng `order_count` sau khi bảo đảm mỗi đơn hàng chỉ xuất hiện một lần trong tập dữ liệu đang tổng hợp.
-5. Quy tắc xử lý NULL, trạng thái đơn chưa giao, khóa Unknown và cách tính giao trễ phải được triển khai nhất quán, kiểm thử và đối soát với các tầng trước.
+5. Các quy tắc đã triển khai, dùng thống nhất ở mọi Data Mart và được kiểm thử/đối soát:
+   - **Đơn hợp lệ** = `fact_orders.is_valid_order` (loại `canceled`, `unavailable`).
+   - **Giao trễ** chỉ tính cho đơn `delivered` có đủ ngày nhận và ngày dự kiến, so sánh theo ngày; số đơn và tỷ lệ trễ dùng cùng mẫu số này.
+   - **Đánh giá** gắn vào đơn chỉ lấy `is_latest_review = true`. Olist đánh giá theo đơn, nên trong `mart_delivery` (grain đơn × người bán) đơn nhiều người bán thì mọi người bán nhận chung điểm của đơn.
+   - **Chi tiêu khách** (`mart_customer.total_spend`) = tổng `payment_value` của đơn hợp lệ; đơn không có dòng thanh toán góp 0 và được ghi ở `orders_without_payment`.
 
 ## Quan hệ với sơ đồ
 

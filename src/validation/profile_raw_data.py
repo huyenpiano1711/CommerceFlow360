@@ -1,8 +1,16 @@
-"""Profile the nine immutable Olist source CSV files.
+"""A02 - Kiểm tra (profiling) 9 file CSV Olist nguồn, chỉ đọc.
 
-The large geolocation table is processed in chunks. Duplicate counts represent
-fully duplicated rows after the first occurrence. Row hashes keep memory usage
-bounded compared with loading the complete table as Python objects.
+Với mỗi file: số dòng, số cột, dung lượng, khớp schema mong đợi, số giá trị thiếu theo cột
+và số dòng trùng hoàn toàn (tính từ lần xuất hiện thứ hai). Kết quả ghi vào data/profiling/.
+
+* Bảng geolocation (~1 triệu dòng) được đọc theo chunk; dòng trùng được phát hiện bằng hash
+  64 bit của từng dòng để bộ nhớ không phụ thuộc kích thước bảng.
+* Mọi cột đọc dạng chuỗi (dtype=str), giống Bronze (all_varchar): giữ số 0 đầu của mã zip
+  ("01037") và bảo đảm cùng một dòng luôn cho cùng một hash dù nằm ở chunk nào
+  (nếu để pandas tự suy kiểu, một cột có thể là int ở chunk này và float ở chunk khác).
+
+Chạy từ thư mục gốc repository:
+    python -m src.validation.profile_raw_data
 """
 
 from __future__ import annotations
@@ -12,6 +20,9 @@ from pathlib import Path
 
 import pandas as pd
 
+
+# Thư mục gốc suy ra từ vị trí file (src/validation/...), không phụ thuộc .git.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 EXPECTED_SCHEMAS: dict[str, list[str]] = {
     "olist_customers_dataset.csv": [
@@ -52,28 +63,20 @@ EXPECTED_SCHEMAS: dict[str, list[str]] = {
     ],
 }
 
-# No independently verified reference row counts are embedded. Empty values in
-# the comparison output deliberately distinguish validation from guesswork.
+# Cố ý để trống: chưa có số dòng tham chiếu được xác minh độc lập từ nguồn chính thức.
+# Cột reference_rows/difference để trống thay vì điền số phỏng đoán; khi có số đã xác minh,
+# thêm vào đây ({"olist_orders_dataset.csv": <số dòng>, ...}) thì status sẽ so cả số dòng.
 REFERENCE_ROWS: dict[str, int] = {}
 
 
-def find_project_root(start: Path | None = None) -> Path:
-    """Find the nearest parent containing both .git and data/raw."""
-    current = (start or Path.cwd()).resolve()
-    for candidate in (current, *current.parents):
-        if (candidate / ".git").exists() and (candidate / "data" / "raw").is_dir():
-            return candidate
-    raise FileNotFoundError("Could not locate project root containing .git and data/raw")
-
-
 def profile_csv(path: Path, expected_columns: list[str], chunk_size: int) -> tuple[dict, list[dict]]:
-    """Return file-level metrics and per-column missing-value metrics."""
+    """Trả về chỉ số cấp file và số giá trị thiếu theo từng cột."""
     actual_rows = 0
-    missing = pd.Series(0, index=expected_columns, dtype="int64")
+    missing: pd.Series | None = None
     unique_row_hashes: set[int] = set()
     actual_columns: list[str] | None = None
 
-    for chunk in pd.read_csv(path, chunksize=chunk_size, low_memory=False):
+    for chunk in pd.read_csv(path, chunksize=chunk_size, dtype=str):
         if actual_columns is None:
             actual_columns = chunk.columns.tolist()
             missing = pd.Series(0, index=actual_columns, dtype="int64")
@@ -81,21 +84,30 @@ def profile_csv(path: Path, expected_columns: list[str], chunk_size: int) -> tup
         missing = missing.add(chunk.isna().sum(), fill_value=0).astype("int64")
         unique_row_hashes.update(pd.util.hash_pandas_object(chunk, index=False).astype("uint64").tolist())
 
-    actual_columns = actual_columns or pd.read_csv(path, nrows=0).columns.tolist()
+    if actual_columns is None:  # file chỉ có dòng tiêu đề
+        actual_columns = pd.read_csv(path, nrows=0).columns.tolist()
+        missing = pd.Series(0, index=actual_columns, dtype="int64")
+
     duplicate_rows = actual_rows - len(unique_row_hashes)
     schema_matches = actual_columns == expected_columns
     reference = REFERENCE_ROWS.get(path.name)
-    difference = actual_rows - reference if reference is not None else pd.NA
-    status = "PASS" if schema_matches else "FAIL"
-    notes = "Schema and CSV readability validated; reference row count not independently verified."
+    rows_match = reference is None or actual_rows == reference
+    status = "PASS" if schema_matches and rows_match else "FAIL"
+
     if not schema_matches:
-        notes = f"Column mismatch. Expected {expected_columns}; found {actual_columns}."
+        notes = f"Lệch schema. Mong đợi {expected_columns}; thực tế {actual_columns}."
+    elif not rows_match:
+        notes = f"Lệch số dòng: thực tế {actual_rows}, tham chiếu {reference}."
+    elif reference is None:
+        notes = "Đã kiểm tra schema và đọc được CSV; chưa có số dòng tham chiếu được xác minh độc lập."
+    else:
+        notes = "Khớp schema và số dòng tham chiếu."
 
     summary = {
         "file_name": path.name,
         "actual_rows": actual_rows,
         "reference_rows": reference if reference is not None else pd.NA,
-        "difference": difference,
+        "difference": actual_rows - reference if reference is not None else pd.NA,
         "column_count": len(actual_columns),
         "size_mb": round(path.stat().st_size / (1024 * 1024), 3),
         "status": status,
@@ -109,14 +121,15 @@ def profile_csv(path: Path, expected_columns: list[str], chunk_size: int) -> tup
     return summary, missing_rows
 
 
-def run(project_root: Path, chunk_size: int = 100_000) -> pd.DataFrame:
+def run(project_root: Path = PROJECT_ROOT, chunk_size: int = 100_000) -> pd.DataFrame:
+    """Profiling 9 file Olist, ghi 3 file CSV vào data/profiling/; trả về bảng đối chiếu."""
     raw_dir = project_root / "data" / "raw"
     output_dir = project_root / "data" / "profiling"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     missing_files = [name for name in EXPECTED_SCHEMAS if not (raw_dir / name).is_file()]
     if missing_files:
-        raise FileNotFoundError(f"Missing required Olist CSV files: {missing_files}")
+        raise FileNotFoundError(f"Thiếu file CSV Olist bắt buộc: {missing_files}")
 
     summaries: list[dict] = []
     missing_details: list[dict] = []
@@ -136,14 +149,14 @@ def run(project_root: Path, chunk_size: int = 100_000) -> pd.DataFrame:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--project-root", type=Path, help="Repository root; auto-detected by default")
+    parser.add_argument("--project-root", type=Path, help="Thư mục gốc repository; mặc định tự suy ra")
     parser.add_argument("--chunk-size", type=int, default=100_000)
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    root = args.project_root.resolve() if args.project_root else find_project_root(Path(__file__).parent)
+    root = args.project_root.resolve() if args.project_root else PROJECT_ROOT
     result = run(root, args.chunk_size)
     print(result.to_string(index=False))
     if (result["status"] == "FAIL").any():

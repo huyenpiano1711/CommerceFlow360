@@ -6,7 +6,7 @@ CommerceFlow 360 là đồ án môn **Nhà kho dữ liệu và Tích hợp**, x�
 
 `Olist CSV + Brazil Holidays → Bronze → Silver → Gold (Star Schema) → Data Mart → Parquet → Streamlit`
 
-Đã hoàn thành: A01–A02 (repository, dữ liệu nguồn), B01 (Bronze), C01–C03 (Silver + dbt test), D02–D04 (Gold + kiểm thử), E01–E05 (Data Mart, phân tích KPI, xuất Parquet), F01–F04 (dashboard Streamlit). Còn lại: B02 (EDA), G01 (notebook chạy toàn bộ pipeline).
+Đã hoàn thành: A01–A02 (repository, dữ liệu nguồn), B01 (Bronze), C01–C03 (Silver + dbt test), D02–D04 (Gold + kiểm thử), E01–E05 (Data Mart, phân tích KPI, xuất Parquet), F01–F04 (dashboard Streamlit). B02 (EDA) thực hiện bằng `src/reporting/eda_report.py`. Còn lại: G01 (notebook chạy toàn bộ pipeline).
 
 **Hướng dẫn chạy chi tiết, số liệu đối soát và quy tắc nghiệp vụ: xem [AGENTS.md](AGENTS.md).**
 
@@ -32,7 +32,7 @@ CommerceFlow360/
 ├── analytics/sql/          # 10 truy vấn KPI analysis_<mart>_<nội dung>.sql (E04)
 ├── app/                    # Dashboard Streamlit F01–F04 (Home.py, pages/, services/, components/)
 ├── data/
-│   ├── raw/                # 9 CSV Olist + holidays_brazil.csv (CHỈ ĐỌC)
+│   ├── raw/                # 9 CSV Olist (CHỈ ĐỌC) + holidays_brazil.csv (sinh bởi src/ingestion)
 │   ├── reference/          # Metadata nguồn ngày lễ
 │   ├── profiling/          # Báo cáo kiểm tra dữ liệu nguồn (A02)
 │   └── exports/            # mart_*.parquet, quality_results.parquet (đầu vào dashboard)
@@ -46,7 +46,7 @@ CommerceFlow360/
 │   ├── validation/         # Profiling dữ liệu nguồn
 │   ├── reporting/          # Xuất Parquet, bảng/hình báo cáo
 │   └── utils/              # Đường dẫn, chạy dbt, truy vấn DuckDB dùng chung
-├── tests/                  # pytest cho đầu ra A02
+├── tests/                  # pytest: đầu ra A02, nạp Bronze, profiling, đọc kết quả dbt
 ├── requirements.txt
 └── AGENTS.md               # Hướng dẫn chạy pipeline
 ```
@@ -66,6 +66,8 @@ python scripts\load_bronze.py        # B01: 10 bảng bronze_*
 python scripts\export_parquet.py     # C–E05: dbt build toàn bộ + xuất Parquet
 python scripts\run_e04_analytics.py  # E04: bảng/hình Chương 4
 streamlit run app/Home.py            # F01–F04: dashboard
+pytest                               # kiểm thử Python (tests/)
+python -m src.reporting.eda_report     # B02: bảng/hình Chương 2 (Bang_2.x, Hinh_2.x)
 ```
 
 Trên Colab hoặc Linux/macOS, xem mục 4 của [AGENTS.md](AGENTS.md). Colab có phiên làm việc tạm thời: file DuckDB có thể mất khi runtime kết thúc, nên tải về hoặc sao lưu (notebook 02 có tùy chọn sao lưu lên Drive).

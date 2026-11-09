@@ -11,6 +11,12 @@ Quy tắc KPI bám theo AGENTS.md mục 9 (không tự định nghĩa lại):
 - Giao trễ: chỉ đơn delivered có is_delivered_late khác NULL.
 - mart_delivery có grain (order_id, seller_id) -> khử trùng theo order_id khi tính chỉ số cấp đơn.
 - Khách hàng: customer_unique_id, chỉ tính khách có has_valid_order.
+- Chi tiêu khách (total_spend) = payment_value khách trả, gồm phí vận chuyển; KHÔNG gọi là doanh thu.
+- Review trong mart_delivery là điểm của ĐƠN, gán chung cho mọi người bán của đơn.
+
+Cache: mỗi hàm load_* nhận thời điểm sửa file (mtime) làm khóa cache, nên khi chạy lại
+scripts/export_parquet.py trong lúc dashboard đang mở, lần tải trang kế tiếp đọc dữ liệu mới
+thay vì giữ bản cũ đến khi khởi động lại Streamlit.
 """
 from __future__ import annotations
 
@@ -48,9 +54,14 @@ def _parquet_path(name: str) -> Path:
     return path
 
 
+def _version(path: Path) -> int:
+    """Khóa cache theo thời điểm sửa file (đổi khi file Parquet được xuất lại)."""
+    return path.stat().st_mtime_ns
+
+
 def _read(name: str, columns: list[str]) -> pd.DataFrame:
     path = _parquet_path(name)
-    cols = ", ".join(columns)
+    cols = ", ".join(columns)  # tên cột là hằng trong module này, không lấy từ người dùng
     with duckdb.connect(":memory:") as con:
         return con.execute(f"select {cols} from read_parquet(?)", [str(path)]).df()
 
@@ -61,8 +72,13 @@ def check_exports() -> None:
         _parquet_path(name)
 
 
-@st.cache_data(show_spinner="Đang đọc mart_sales...")
 def load_sales() -> pd.DataFrame:
+    return _load_sales(_version(_parquet_path("mart_sales")))
+
+
+# Tham số version KHÔNG đặt tên bắt đầu bằng "_": st.cache_data bỏ qua các tham số đó khi tạo khóa cache
+@st.cache_data(show_spinner="Đang đọc mart_sales...")
+def _load_sales(version: int) -> pd.DataFrame:
     df = _read("mart_sales", [
         "order_id", "order_item_id", "order_purchase_date", "year", "month", "is_holiday",
         "product_category", "customer_state", "seller_id", "order_status",
@@ -74,8 +90,12 @@ def load_sales() -> pd.DataFrame:
     return df
 
 
-@st.cache_data(show_spinner="Đang đọc mart_delivery...")
 def load_delivery() -> pd.DataFrame:
+    return _load_delivery(_version(_parquet_path("mart_delivery")))
+
+
+@st.cache_data(show_spinner="Đang đọc mart_delivery...")
+def _load_delivery(version: int) -> pd.DataFrame:
     df = _read("mart_delivery", [
         "order_id", "seller_id", "seller_state", "customer_state", "year", "month",
         "order_status", "delivery_days", "days_late", "is_delivered_late", "review_score",
@@ -85,8 +105,12 @@ def load_delivery() -> pd.DataFrame:
     return df
 
 
-@st.cache_data(show_spinner="Đang đọc mart_customer...")
 def load_customer() -> pd.DataFrame:
+    return _load_customer(_version(_parquet_path("mart_customer")))
+
+
+@st.cache_data(show_spinner="Đang đọc mart_customer...")
+def _load_customer(version: int) -> pd.DataFrame:
     return _read("mart_customer", [
         "customer_key", "customer_unique_id", "order_count", "order_count_all_status",
         "total_spend", "first_order_date", "last_order_date", "days_since_last_order",
@@ -94,17 +118,25 @@ def load_customer() -> pd.DataFrame:
     ])
 
 
-@st.cache_data(show_spinner="Đang đọc quality_results...")
 def load_quality() -> pd.DataFrame:
+    return _load_quality(_version(_parquet_path("quality_results")))
+
+
+@st.cache_data(show_spinner="Đang đọc quality_results...")
+def _load_quality(version: int) -> pd.DataFrame:
     return _read("quality_results", ["test_name", "status", "execution_time_sec", "failing_rows", "message"])
 
 
-@st.cache_data
 def load_reconciliation_reference() -> pd.DataFrame | None:
     """Bảng 3.7.1 (đối soát Bronze -> Silver -> Gold, task D04) nếu có trong repo; None nếu không."""
     path = TABLE_DIR / "Bang_3.7.1_DoiSoatGold.csv"
     if not path.exists():
         return None
+    return _load_reconciliation(str(path), _version(path))
+
+
+@st.cache_data
+def _load_reconciliation(path: str, version: int) -> pd.DataFrame:
     return pd.read_csv(path, encoding="utf-8-sig")
 
 
@@ -130,6 +162,13 @@ def state_options() -> list[str]:
 
 def category_options() -> list[str]:
     return sorted(load_sales()["product_category"].dropna().unique().tolist())
+
+
+def partial_month_summary(sales: pd.DataFrame) -> str:
+    """Các tháng ngoài giai đoạn đầy đủ kèm số đơn, vd. "2016-09 (4 đơn), 2016-10 (324 đơn)"; rỗng nếu không có."""
+    orders = sales.groupby("year_month")["order_id"].nunique()
+    partial = orders[(orders.index < FULL_MONTH_START) | (orders.index > FULL_MONTH_END)]
+    return ", ".join(f"{month} ({n:,} đơn)".replace(",", ".") for month, n in partial.items())
 
 
 def filter_sales(df: pd.DataFrame, f: Filters) -> pd.DataFrame:
@@ -207,8 +246,13 @@ def customer_kpis(customer: pd.DataFrame) -> dict[str, float]:
 
 
 def spend_quartiles(customer: pd.DataFrame) -> pd.DataFrame:
-    """Phân khúc chi tiêu 4 nhóm bằng nhau về số khách (giống ntile(4) trong analysis_customer_spend_segments.sql)."""
-    spend = customer.loc[customer["total_spend"] > 0, "total_spend"].sort_values().reset_index(drop=True)
+    """Phân khúc chi tiêu 4 nhóm bằng nhau về số khách (giống ntile(4) trong analysis_customer_spend_segments.sql).
+
+    total_spend là payment_value khách trả (gồm phí vận chuyển), không phải doanh thu price.
+    Sắp theo (total_spend, customer_unique_id) để khách bằng điểm chi tiêu luôn rơi vào cùng một nhóm.
+    """
+    spend = (customer.loc[customer["total_spend"] > 0, ["total_spend", "customer_unique_id"]]
+                     .sort_values(["total_spend", "customer_unique_id"])["total_spend"].reset_index(drop=True))
     n = len(spend)
     base, extra = divmod(n, 4)
     sizes = [base + (1 if i < extra else 0) for i in range(4)]
@@ -219,7 +263,7 @@ def spend_quartiles(customer: pd.DataFrame) -> pd.DataFrame:
     out = (seg.groupby("spend_quartile")["total_spend"]
               .agg(customer_count="count", min_spend="min", max_spend="max", total_spend_segment="sum")
               .reset_index())
-    out["pct_revenue"] = 100 * out["total_spend_segment"] / out["total_spend_segment"].sum()
+    out["pct_total_spend"] = 100 * out["total_spend_segment"] / out["total_spend_segment"].sum()
     return out
 
 

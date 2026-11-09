@@ -44,6 +44,17 @@ with reconciliations as (
     union all
 
     select
+        -- Quy tắc chi tiêu: đơn hợp lệ không có dòng thanh toán vẫn đếm trong order_count, góp 0 vào total_spend
+        -- và phải hiện ở orders_without_payment (không được rơi mất)
+        'mart_customer: orders_without_payment = don hop le khong co fact_payments',
+        cast((select count(*) from {{ ref('fact_orders') }} o
+              where o.is_valid_order and o.customer_key is not null
+                and not exists (select 1 from {{ ref('fact_payments') }} p where p.order_id = o.order_id)) as decimal(18, 2)),
+        cast((select sum(orders_without_payment) from {{ ref('mart_customer') }}) as decimal(18, 2))
+
+    union all
+
+    select
         'mart_sales: doanh thu don hop le = fact_order_items x fact_orders.is_valid_order',
         cast((select sum(i.item_price) from {{ ref('fact_order_items') }} i
               join {{ ref('fact_orders') }} o on o.order_id = i.order_id

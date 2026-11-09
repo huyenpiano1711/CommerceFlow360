@@ -1,4 +1,12 @@
-"""Generate national Brazil holidays for 2016–2018 using python-holidays."""
+"""A02 - Sinh danh sách ngày lễ quốc gia Brazil 2016–2018 bằng thư viện python-holidays.
+
+Ghi data/raw/holidays_brazil.csv (nguồn thứ 10 của Bronze) và data/reference/holidays_brazil_metadata.json
+(phiên bản thư viện, để tái lập kết quả). Đây là file DUY NHẤT trong data/raw do code sinh ra;
+9 CSV Olist còn lại là dữ liệu gốc, chỉ đọc.
+
+Chạy từ thư mục gốc repository:
+    python -m src.ingestion.generate_brazil_holidays
+"""
 
 from __future__ import annotations
 
@@ -14,15 +22,13 @@ import pandas as pd
 YEARS = (2016, 2017, 2018)
 
 
-def find_project_root(start: Path | None = None) -> Path:
-    current = (start or Path.cwd()).resolve()
-    for candidate in (current, *current.parents):
-        if (candidate / ".git").exists() and (candidate / "data" / "raw").is_dir():
-            return candidate
-    raise FileNotFoundError("Could not locate project root containing .git and data/raw")
+# Thư mục gốc suy ra từ vị trí file (src/ingestion/...), không phụ thuộc .git
+# nên vẫn chạy được khi tải repository dạng ZIP.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
-def generate(project_root: Path) -> pd.DataFrame:
+def generate(project_root: Path = PROJECT_ROOT) -> pd.DataFrame:
+    """Sinh, kiểm tra và ghi danh sách ngày lễ; trả về DataFrame đã ghi."""
     brazil_holidays = holidays.Brazil(years=YEARS, language="en_US")
     frame = pd.DataFrame(
         (
@@ -36,13 +42,13 @@ def generate(project_root: Path) -> pd.DataFrame:
         )
     )
     if frame.empty:
-        raise RuntimeError("The holidays library returned no Brazil holidays")
+        raise RuntimeError("Thư viện holidays không trả về ngày lễ Brazil nào")
     if frame["date"].duplicated().any():
-        raise ValueError("Duplicate holiday dates detected")
+        raise ValueError("Có ngày lễ bị trùng")
     if frame.isna().any().any():
-        raise ValueError("NULL found in required holiday fields")
+        raise ValueError("Có giá trị NULL trong cột bắt buộc")
     if set(pd.to_datetime(frame["date"]).dt.year) != set(YEARS):
-        raise ValueError("Holiday output contains unexpected or missing years")
+        raise ValueError("Kết quả thiếu năm hoặc có năm ngoài phạm vi 2016–2018")
 
     raw_dir = project_root / "data" / "raw"
     reference_dir = project_root / "data" / "reference"
@@ -64,13 +70,13 @@ def generate(project_root: Path) -> pd.DataFrame:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--project-root", type=Path, help="Repository root; auto-detected by default")
+    parser.add_argument("--project-root", type=Path, help="Thư mục gốc repository; mặc định tự suy ra")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    root = args.project_root.resolve() if args.project_root else find_project_root(Path(__file__).parent)
+    root = args.project_root.resolve() if args.project_root else PROJECT_ROOT
     result = generate(root)
     print(result.to_string(index=False))
-    print(f"Generated {len(result)} national holiday rows with holidays {version('holidays')}.")
+    print(f"Đã sinh {len(result)} ngày lễ quốc gia bằng holidays {version('holidays')}.")

@@ -25,7 +25,8 @@ TABLES = [
     ("geolocation", "geolocation_zip_code_prefix"),
     ("holidays", "holiday_date"),
 ]
-VIA_MACRO_BOX = range(3, 7)  # các dòng có mũi tên đi qua khối macro (chỉ để bố cục gọn)
+# Khối macro nằm giữa hai tầng; mọi bảng đều đi qua khối này (mọi model silver_* dùng macro làm sạch)
+MACRO_BOX = (612, 463, 308, 329)  # x, y, rộng, cao
 
 MACROS = ("dbt macros\n\nclean_text\nclean_id · clean_code\nclean_state · clean_zip\n"
           "clean_timestamp\nclean_money · clean_int\nclean_city\n\nkhử trùng theo grain")
@@ -43,11 +44,22 @@ def _arrow(ax, start, end, color="#777777", **kw):
 
 def draw_silver_flow(total: int, passed: int, warned: int, show: bool = False):
     """Vẽ và lưu Hình 3.4.1; total/passed/warned là số test Silver của lần chạy hiện tại."""
+    # rc_context: font serif chỉ áp dụng cho hình này, không đổi font các hình vẽ sau trong cùng notebook
+    with plt.rc_context({"font.family": "serif"}):
+        fig = _draw(total, passed, warned)
+    FIGURE_DIR.mkdir(parents=True, exist_ok=True)
+    fig.savefig(FIGURE_DIR / FIGURE_NAME, dpi=100, bbox_inches="tight", facecolor="white")
+    if show:
+        plt.show()
+    plt.close(fig)
+    print("Hinh:", FIGURE_NAME)
+
+
+def _draw(total: int, passed: int, warned: int):
     fig, ax = plt.subplots(figsize=(20.5, 12))
     ax.set_xlim(0, 2055)
     ax.set_ylim(1200, 40)
     ax.axis("off")
-    plt.rcParams["font.family"] = "serif"
 
     bronze_c, silver_c = "#a87a4f", "#6b7f99"
     _box(ax, 30, 57, 550, 1121, bronze_c, "#f5eee6")
@@ -57,7 +69,8 @@ def draw_silver_flow(total: int, passed: int, warned: int, show: bool = False):
     ax.text(1279, 85, "TẦNG SILVER", ha="center", va="center", fontsize=19, weight="bold")
     ax.text(1279, 128, "đã làm sạch, giữ nguyên grain", ha="center", va="center", fontsize=14, style="italic")
 
-    _box(ax, 612, 463, 308, 329, "#999999")
+    mx, my, mw, mh = MACRO_BOX
+    _box(ax, mx, my, mw, mh, "#999999")
     ax.text(766, 627, MACROS, ha="center", va="center", fontsize=12.5, linespacing=1.25)
 
     row_h, step, top = 66, 95.5, 157
@@ -70,11 +83,10 @@ def draw_silver_flow(total: int, passed: int, warned: int, show: bool = False):
         _box(ax, 982, y, 594, row_h, silver_c)
         ax.text(1279, mid - 11, f"silver_{name}", ha="center", va="center", fontsize=size, weight="bold")
         ax.text(1279, mid + 15, f"grain: {grain}", ha="center", va="center", fontsize=11, color="#555555")
-        if i in VIA_MACRO_BOX:
-            ax.plot([550, 612], [mid, mid], color="#777777", linewidth=1.5)
-            _arrow(ax, (920, mid), (980, mid))
-        else:
-            _arrow(ax, (550, mid), (980, mid))
+        # Bronze -> cạnh trái khối macro, cạnh phải khối macro -> Silver (cùng cao độ nếu nằm trong khối)
+        port = min(max(mid, my + 15), my + mh - 15)
+        ax.plot([550, mx], [mid, port], color="#777777", linewidth=1.2)
+        _arrow(ax, (mx + mw, port), (980, mid))
 
     # silver_product_category_name_translation -> silver_products
     y_tr, y_pr = top + 6 * step + row_h / 2, top + 7 * step + row_h / 2
@@ -88,10 +100,4 @@ def draw_silver_flow(total: int, passed: int, warned: int, show: bool = False):
     ax.text(1833, 724, "Tầng Gold\ndim_* / fact_*\n→ mart_*", ha="center", va="center", fontsize=14, linespacing=1.3)
     _arrow(ax, (1606, 460), (1696, 460), color="#444444")
     _arrow(ax, (1833, 530), (1833, 654), color="#444444")
-
-    FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIGURE_DIR / FIGURE_NAME, dpi=100, bbox_inches="tight", facecolor="white")
-    if show:
-        plt.show()
-    plt.close(fig)
-    print("Hinh:", FIGURE_NAME)
+    return fig

@@ -9,7 +9,7 @@ import streamlit as st
 from components.ui import (
     STRETCH,
     AMBER, BLUE, empty_guard, fmt_int, fmt_money, fmt_money_short, fmt_num, fmt_pct, fmt_pct_points, page_header,
-    setup_page, vn_axis_ticks,
+    setup_page, style_fig, vn_axis_ticks,
 )
 from services.data_loader import customer_kpis, load_customer, recency_distribution, spend_quartiles
 
@@ -31,10 +31,13 @@ c1, c2, c3, c4 = st.columns(4)
 c1.metric("Khách hàng", fmt_int(k["customers"]), help="customer_unique_id có ít nhất 1 đơn hợp lệ.")
 c2.metric("Khách mua lại (≥ 2 đơn)", fmt_int(k["repeat_customers"]))
 c3.metric("Tỷ lệ mua lại", fmt_pct(k["repeat_rate"]))
-c4.metric("Tổng chi tiêu", fmt_money_short(k["total_spend"]), help="Tổng payment_value của đơn hợp lệ.")
+c4.metric("Tổng chi tiêu", fmt_money_short(k["total_spend"]),
+          help="Tổng payment_value khách trả của đơn hợp lệ, gồm phí vận chuyển (khác doanh thu price ở trang Sales).")
 st.caption(f"{fmt_int(no_valid)} khách chỉ có đơn canceled/unavailable được giữ trong mart để đối soát nhưng loại khỏi các chỉ số dưới đây.")
 
 # ------------------------------------------------------------------ mua lại
+# Màu gán theo nhãn, thống nhất với Hình 4.4.1 của báo cáo (mua 1 lần: teal, mua lại: vàng)
+REPEAT_COLORS = {"Mua 1 lần": BLUE, "Mua lại (≥ 2 đơn)": AMBER}
 left, right = st.columns(2)
 with left:
     st.subheader("Khách mua 1 lần vs mua lại")
@@ -47,19 +50,19 @@ with left:
     fig = px.bar(grp, x="nhom", y="pct", text=grp["pct"].map(lambda v: fmt_pct_points(v)),
                  custom_data=["customers_label", "avg_spend_label", "pct_label"],
                  labels={"pct": "% khách hàng", "nhom": ""})
-    fig.update_traces(marker_color=[BLUE, AMBER] if grp.iloc[0]["nhom"].startswith("Mua lại") else [AMBER, BLUE],
+    fig.update_traces(marker_color=grp["nhom"].map(REPEAT_COLORS).tolist(),
                       textposition="outside",
                       hovertemplate="%{x}<br>Tỷ trọng: %{customdata[2]}<br>Số khách: %{customdata[0]}<br>Chi tiêu TB: %{customdata[1]}<extra></extra>")
     fig.update_yaxes(range=[0, 110])
     fig.update_yaxes(**vn_axis_ticks(grp["pct"], digits=1))
-    st.plotly_chart(fig.update_layout(height=360), **STRETCH)
+    st.plotly_chart(style_fig(fig, 360), **STRETCH)
 with right:
     st.subheader("Chi tiêu trung bình mỗi khách (R$)")
     fig = px.bar(grp, x="nhom", y="avg_spend", text=grp["avg_spend"].map(lambda v: fmt_num(v)),
                  labels={"avg_spend": "Chi tiêu TB (R$)", "nhom": ""})
-    fig.update_traces(marker_color=[BLUE, AMBER] if grp.iloc[0]["nhom"].startswith("Mua lại") else [AMBER, BLUE], textposition="outside")
+    fig.update_traces(marker_color=grp["nhom"].map(REPEAT_COLORS).tolist(), textposition="outside")
     fig.update_yaxes(**vn_axis_ticks(grp["avg_spend"]))
-    st.plotly_chart(fig.update_layout(height=360), **STRETCH)
+    st.plotly_chart(style_fig(fig, 360), **STRETCH)
 st.caption("Olist là marketplace đa ngành nên tỷ lệ mua lại thấp là đặc điểm của bộ dữ liệu; chênh lệch chi tiêu cho thấy giá trị tiềm năng của giữ chân khách.")
 
 # ------------------------------------------------------------------ phân khúc chi tiêu
@@ -68,19 +71,19 @@ seg = spend_quartiles(valid)
 seg["customer_count_label"] = seg["customer_count"].map(fmt_int)
 seg["min_spend_label"] = seg["min_spend"].map(fmt_money_short)
 seg["max_spend_label"] = seg["max_spend"].map(fmt_money_short)
-fig = px.bar(seg, x=seg["spend_quartile"].astype(str), y="pct_revenue", text=seg["pct_revenue"].map(lambda v: fmt_pct_points(v)),
+fig = px.bar(seg, x=seg["spend_quartile"].astype(str), y="pct_total_spend", text=seg["pct_total_spend"].map(lambda v: fmt_pct_points(v)),
              custom_data=["customer_count_label", "min_spend_label", "max_spend_label"],
-             labels={"x": "Quartile (1 = chi tiêu thấp nhất)", "pct_revenue": "% tổng chi tiêu"})
+             labels={"x": "Quartile (1 = chi tiêu thấp nhất)", "pct_total_spend": "% tổng chi tiêu"})
 fig.update_traces(marker_color=BLUE, textposition="outside",
                   hovertemplate="Quartile %{x}<br>Tỷ trọng: %{y:.2f}%<br>Số khách: %{customdata[0]}<br>"
                                 "Chi tiêu thấp nhất: %{customdata[1]}<br>Chi tiêu cao nhất: %{customdata[2]}<extra></extra>")
-fig.update_yaxes(range=[0, max(seg["pct_revenue"]) * 1.15])
-fig.update_yaxes(**vn_axis_ticks(seg["pct_revenue"], digits=1))
-st.plotly_chart(fig.update_layout(height=380), **STRETCH)
+fig.update_yaxes(range=[0, max(seg["pct_total_spend"]) * 1.15])
+fig.update_yaxes(**vn_axis_ticks(seg["pct_total_spend"], digits=1))
+st.plotly_chart(style_fig(fig, 380), **STRETCH)
 # Bỏ các cột *_label (chỉ dùng cho hover của biểu đồ) khỏi bảng hiển thị
 seg_display = seg.drop(columns=["customer_count_label", "min_spend_label", "max_spend_label"]).rename(
     columns={"spend_quartile": "Quartile", "customer_count": "Số khách", "min_spend": "Chi tiêu thấp nhất (R$)",
-             "max_spend": "Chi tiêu cao nhất (R$)", "total_spend_segment": "Tổng chi tiêu (R$)", "pct_revenue": "% tổng chi tiêu"}
+             "max_spend": "Chi tiêu cao nhất (R$)", "total_spend_segment": "Tổng chi tiêu (R$)", "pct_total_spend": "% tổng chi tiêu"}
 ).copy()
 seg_display["Số khách"] = seg_display["Số khách"].map(fmt_int)
 for column in ["Chi tiêu thấp nhất (R$)", "Chi tiêu cao nhất (R$)"]:
@@ -101,7 +104,7 @@ fig.update_traces(marker_color=BLUE, textposition="outside")
 fig.update_traces(hovertemplate="%{x}<br>Tỷ trọng: %{y:.2f}%<br>Số khách: %{customdata[0]}<extra></extra>")
 fig.update_yaxes(range=[0, max(rec["pct_customers"]) * 1.15])
 fig.update_yaxes(**vn_axis_ticks(rec["pct_customers"], digits=1))
-st.plotly_chart(fig.update_layout(height=360), **STRETCH)
+st.plotly_chart(style_fig(fig, 360), **STRETCH)
 snapshot = valid["last_order_date"].max()
 st.caption(f"Mốc so sánh là ngày đặt hàng lớn nhất trong dữ liệu ({snapshot:%d/%m/%Y}), không phải ngày hiện tại; "
            "đây không phải chỉ báo khách rời bỏ theo thời gian thực.")

@@ -27,12 +27,17 @@ models:
 
   - name: mart_delivery
     description: "Thời gian giao hàng và đánh giá theo đơn x người bán tham gia đơn. Grain: 1 dòng / (order_id, seller_id)."
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: ['order_id', 'seller_id']
     columns:
       - name: order_id
         data_tests: [not_null]
       - name: is_delivered_late
         description: "NULL nếu đơn chưa giao (không có order_delivered_customer_date)."
       - name: review_score
+        description: "Điểm review mới nhất của ĐƠN (Olist không đánh giá từng người bán). Đơn nhiều người bán thì mọi người bán nhận chung điểm này; khử trùng theo order_id khi tính TB ngoài phạm vi người bán."
         data_tests:
           - accepted_values:
               arguments:
@@ -51,7 +56,10 @@ models:
       - name: order_count
         data_tests: [not_null]
       - name: total_spend
-        description: "Tổng payment_value của các đơn hợp lệ (fact_orders.is_valid_order)."
+        description: "Tổng payment_value (khách thực trả, gồm phí vận chuyển) của các đơn hợp lệ. Không phải doanh thu price. Đơn hợp lệ không có dòng thanh toán góp 0, không tự suy số tiền."
+        data_tests: [not_null]
+      - name: orders_without_payment
+        description: "Số đơn hợp lệ của khách mà nguồn không có dòng thanh toán nào (đối soát ở tests/test_mart_reconciliation.sql)."
         data_tests: [not_null]
       - name: has_valid_order
         description: "TRUE nếu khách có ít nhất 1 đơn hợp lệ. Lọc cờ này khi tính tỷ lệ mua lại, recency, phân khúc."

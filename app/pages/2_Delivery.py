@@ -41,10 +41,10 @@ st.caption(f"{fmt_int(not_eligible)} đơn chưa giao, đã hủy hoặc thiếu
 
 # ------------------------------------------------------------------ theo bang
 st.subheader("Tỷ lệ giao trễ theo bang khách hàng")
-# Số đơn = đơn delivered (khớp Bảng 4.3.1); tỷ lệ trễ chỉ tính trên đơn có đủ mốc thời gian (mean bỏ qua NULL)
-delivered = dd[dd["order_status"] == "delivered"]
-by_state = (delivered.groupby("customer_state")
-              .agg(orders=("order_id", "count"), late_rate=("is_delivered_late", lambda s: s.dropna().astype(int).mean()),
+# Số đơn và tỷ lệ trễ cùng tính trên một tập: đơn delivered có đủ mốc thời gian (el), giống Bảng 4.3.1
+# và bảng người bán bên dưới; trước đây số đơn gồm cả đơn delivered thiếu ngày nhận nên lệch mẫu số.
+by_state = (el.groupby("customer_state")
+              .agg(orders=("order_id", "count"), late_rate=("is_delivered_late", lambda s: s.astype(int).mean()),
                    avg_days_late=("days_late", lambda s: s.astype(float).mean())).reset_index())
 mode = st.radio("Hiển thị", ["Top 10 bang nhiều đơn nhất", "Tất cả bang (≥ 100 đơn)"], horizontal=True, label_visibility="collapsed")
 if mode.startswith("Top"):
@@ -123,7 +123,7 @@ sel = delivery[(delivery["order_status"] == "delivered") & delivery["is_delivere
 sellers = (sel.groupby("seller_id")
               .agg(orders=("order_id", "nunique"), late_rate=("is_delivered_late", lambda s: s.astype(int).mean()),
                    avg_review=("review_score", lambda s: s.astype(float).mean())).reset_index())
-sellers = sellers[sellers["orders"] >= min_orders].sort_values("late_rate", ascending=False).head(10)
+sellers = sellers[sellers["orders"] >= min_orders].sort_values(["late_rate", "seller_id"], ascending=[False, True]).head(10)
 if sellers.empty:
     st.info("Không có người bán nào đạt ngưỡng số đơn trong bộ lọc hiện tại.")
 else:
@@ -135,3 +135,6 @@ else:
     sellers_display["Tỷ lệ trễ (%)"] = sellers_display["Tỷ lệ trễ (%)"].map(fmt_num)
     sellers_display["Điểm ĐG TB"] = sellers_display["Điểm ĐG TB"].map(fmt_num)
     st.dataframe(sellers_display, hide_index=True, **STRETCH)
+    st.caption("Đơn có nhiều người bán được tính cho mỗi người bán tham gia đơn. Olist chỉ cho đánh giá theo đơn, "
+               "nên điểm ĐG TB của người bán là điểm của các đơn họ tham gia: đơn nhiều người bán thì mọi người bán "
+               "nhận chung một điểm, không phải điểm riêng cho từng người.")

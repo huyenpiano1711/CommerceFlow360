@@ -97,8 +97,8 @@ Trên Windows có thể dùng `\` thay `/` trong đường dẫn.
   | bronze_product_category_name_translation | 71 |
   | bronze_holidays | 27 |
 
-- Lệnh 2: có dòng `Done. PASS=106 WARN=5 ERROR=0` (22 model + 89 test) và 4 dòng xuất file:
-  `mart_sales: 112650 dong`, `mart_delivery: 100010 dong`, `mart_customer: 96096 dong`, `quality_results: 89 test`.
+- Lệnh 2: có dòng `Done. PASS=108 WARN=5 ERROR=0` (22 model + 91 test) và 4 dòng xuất file:
+  `mart_sales: 112650 dong`, `mart_delivery: 100010 dong`, `mart_customer: 96096 dong`, `quality_results: 91 test`.
   5 WARN là bất thường có thật của dữ liệu nguồn đã được gắn cờ ở Silver — **không phải lỗi**:
   `not_null_silver_sellers_seller_city` (2), `test_silver_carrier_after_purchase` (166),
   `test_silver_review_after_purchase` (64), `not_null_silver_geolocation_geolocation_lat` (5),
@@ -184,8 +184,13 @@ cd ..
   `freight_value` và `payment_value` là measure riêng, không cộng lẫn.
 - **Số đơn** = `count(distinct order_id)`; không cộng số đơn giữa các danh mục/người bán.
 - **Giao trễ:** chỉ tính cho đơn `delivered` có ngày nhận; so sánh theo **ngày**
-  (`delivered_date > estimated_date`).
-- **Đánh giá:** khi gắn vào đơn, chỉ lấy `is_latest_review = true`.
+  (`delivered_date > estimated_date`). Số đơn và tỷ lệ trễ (theo bang, người bán, tháng) dùng **cùng một
+  mẫu số**: đơn `delivered` có `is_delivered_late` khác NULL.
+- **Đánh giá:** khi gắn vào đơn, chỉ lấy `is_latest_review = true`. Olist đánh giá theo đơn nên trong
+  `mart_delivery` đơn nhiều người bán thì mọi người bán nhận chung điểm của đơn (không chia điểm).
+- **Chi tiêu khách** (`mart_customer.total_spend`) = tổng `payment_value` của đơn hợp lệ (gồm phí vận chuyển),
+  không gọi là doanh thu. Đơn hợp lệ không có dòng thanh toán góp 0, ghi ở `orders_without_payment`; không tự suy số tiền.
+- **So sánh theo tháng** chỉ dùng các tháng đầy đủ 2017-01 → 2018-08 (Bảng/Hình 4.2.1, mặc định của dashboard).
 - **Khách hàng:** dùng `customer_unique_id` (khóa `dim_customer`) cho khách quay lại/tổng chi tiêu;
   `customer_id` chỉ là mã theo từng đơn. Các chỉ số khách hàng chỉ tính trên đơn hợp lệ;
   lọc `has_valid_order` khi tính tỷ lệ mua lại, recency, phân khúc.
@@ -211,7 +216,12 @@ cd ..
 - Không bấm nút ▶ Run Python File trên `Home.py` (chỉ in cảnh báo, không mở web). Nếu PowerShell chặn `Activate.ps1`, chạy `.\.venv\Scripts\streamlit.exe run app/Home.py`.
 - Sửa `app/components/ui.py` hoặc `services/data_loader.py` xong phải tắt (`Ctrl + C`) và chạy lại Streamlit; chỉ file trang mới tự nạp lại.
 
+Bảng/hình bổ sung cho báo cáo (chạy sau lệnh 2, khi Silver/Gold đã build):
+
+- `python -m src.reporting.eda_report` — B02 EDA: `reports/tables/Bang_2.5`…`Bang_2.12`, `reports/figures/Hinh_2.1`…`Hinh_2.6`.
+- `python -m src.reporting.architecture` — Hình 3.1.1 kiến trúc tổng thể.
+- `python -m src.reporting.star_schema` — Hình 3.5.1 Star Schema sinh từ cấu trúc bảng DuckDB (cần Graphviz, lệnh `dot`).
+
 Phần chưa làm:
 
-- B02 `01_Data_Profiling_EDA.ipynb` + `reports/figures/Hinh_2.x_*.png`.
 - G01 `07_Run_Full_Pipeline.ipynb` (có thể gọi `src.ingestion.bronze_ingestion.run`, `src.reporting.exports.build_and_export`, `src.reporting.kpi_report.run_all`).

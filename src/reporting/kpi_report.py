@@ -6,6 +6,7 @@ Dùng chung cho scripts/run_e04_analytics.py và notebooks/06_Business_Analytics
 """
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from typing import Callable
 
@@ -20,6 +21,15 @@ SQL_DIR = PROJECT_ROOT / "analytics" / "sql"
 BLUE, RED, GREEN, AMBER = "#2563eb", "#dc2626", "#16a34a", "#f59e0b"
 money_fmt = mticker.FuncFormatter(lambda x, _: f"{x / 1e6:.1f}M")
 
+# Màu gán theo NHÃN (không theo thứ tự dòng) để không lệch khi đổi ORDER BY hoặc thiếu một nhóm
+ONTIME_COLORS = {"đúng hạn": GREEN, "giao trễ": RED}
+REPEAT_COLORS = {"mua 1 lần": BLUE, "mua lại (>=2 đơn)": AMBER}
+REPEAT_ORDER = list(REPEAT_COLORS)
+
+
+def _colors(labels: pd.Series, mapping: dict[str, str]) -> list[str]:
+    return [mapping.get(label, BLUE) for label in labels]
+
 
 def _plot_monthly_revenue(ax, df):
     x = range(len(df))
@@ -27,7 +37,7 @@ def _plot_monthly_revenue(ax, df):
     ax.set_xticks(list(x))
     ax.set_xticklabels([f"{int(r.year)}-{int(r.month):02d}" for r in df.itertuples()], rotation=60, fontsize=7)
     ax.yaxis.set_major_formatter(money_fmt)
-    ax.set_title("Doanh thu theo tháng (mart_sales, đơn hợp lệ)")
+    ax.set_title("Doanh thu theo tháng (đơn hợp lệ, các tháng đầy đủ 01/2017–08/2018)")
     ax.set_ylabel("Doanh thu (R$)")
 
 
@@ -52,23 +62,26 @@ def _plot_late_rate_by_state(ax, df):
 
 
 def _plot_review_by_ontime(ax, df):
-    ax.bar(df["nhom_giao_hang"], df["avg_review_score"], color=[GREEN, RED])
+    ax.bar(df["nhom_giao_hang"], df["avg_review_score"], color=_colors(df["nhom_giao_hang"], ONTIME_COLORS))
     ax.set_ylim(0, 5)
     ax.set_title("Điểm đánh giá trung bình: đúng hạn vs trễ")
     ax.set_ylabel("Điểm đánh giá (1-5)")
 
 
 def _plot_repeat_rate(ax, df):
-    ax.bar(df["nhom_khach_hang"], df["pct_customers"], color=[BLUE, AMBER])
+    # Vẽ theo thứ tự "mua 1 lần" -> "mua lại" cho khớp tiêu đề; bảng CSV giữ thứ tự của SQL
+    df = df.set_index("nhom_khach_hang").reindex(REPEAT_ORDER).dropna(how="all").reset_index()
+    ax.bar(df["nhom_khach_hang"], df["pct_customers"], color=_colors(df["nhom_khach_hang"], REPEAT_COLORS))
     ax.set_title("Tỷ lệ khách mua 1 lần vs mua lại")
     ax.set_ylabel("% khách hàng")
 
 
 def _plot_spend_segments(ax, df):
-    ax.bar(df["spend_quartile"].astype(str), df["pct_revenue"], color=BLUE)
-    ax.set_title("% tổng doanh thu theo phân khúc chi tiêu (quartile)")
+    # total_spend là payment_value khách trả (gồm phí vận chuyển), không phải doanh thu price
+    ax.bar(df["spend_quartile"].astype(str), df["pct_total_spend"], color=BLUE)
+    ax.set_title("% tổng chi tiêu của khách theo phân khúc (quartile)")
     ax.set_xlabel("Quartile (1 = chi tiêu thấp nhất)")
-    ax.set_ylabel("% tổng chi tiêu")
+    ax.set_ylabel("% tổng chi tiêu (payment_value)")
 
 
 def _plot_recency(ax, df):
@@ -84,6 +97,10 @@ class Report:
     plot: Callable | None = None
     figure: str | None = None
     figsize: tuple[float, float] = (8, 4.5)
+
+    def __post_init__(self) -> None:
+        if (self.plot is None) != (self.figure is None):
+            raise ValueError(f"{self.sql_file}: plot và figure phải cùng có hoặc cùng không có.")
 
 
 # Thứ tự theo mục báo cáo 4.2 (Sales) -> 4.3 (Delivery) -> 4.4 (Customer)
@@ -146,8 +163,17 @@ def run_report(key: str, show: bool = False) -> pd.DataFrame:
 
 
 def export_test_summary() -> pd.DataFrame:
-    """Bảng 4.1.1 - số test theo trạng thái, đọc từ quality_results.parquet (xuất bởi E05)."""
-    quality = pd.read_parquet(EXPORT_DIR / "quality_results.parquet")
+    """Bảng 4.1.1 - số test theo trạng thái, đọc từ quality_results.parquet (xuất bởi E05).
+
+    Các bảng 4.2–4.4 đọc trực tiếp DuckDB; nếu DuckDB được build lại sau lần xuất Parquet gần nhất
+    thì hai nguồn có thể lệch nhau, nên cảnh báo để chạy lại scripts/export_parquet.py.
+    """
+    quality_path = EXPORT_DIR / "quality_results.parquet"
+    if DUCKDB_PATH.exists() and DUCKDB_PATH.stat().st_mtime > quality_path.stat().st_mtime + 60:
+        warnings.warn(
+            "commerceflow.duckdb mới hơn quality_results.parquet: chạy lại scripts/export_parquet.py "
+            "để Bảng 4.1.1 khớp với các bảng KPI.", stacklevel=2)
+    quality = pd.read_parquet(quality_path)
     summary = quality["status"].value_counts().rename_axis("status").reset_index(name="so_luong")
     summary = pd.concat([summary, pd.DataFrame([{"status": "total", "so_luong": len(quality)}])], ignore_index=True)
     TABLE_DIR.mkdir(parents=True, exist_ok=True)

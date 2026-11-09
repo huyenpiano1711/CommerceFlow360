@@ -12,7 +12,7 @@ from components.ui import (
     AMBER, BLUE, GREY, empty_guard, filter_summary, fmt_int, fmt_money, fmt_money_short, fmt_num,
     page_header, setup_page, sidebar_filters, style_fig, vn_axis_ticks,
 )
-from services.data_loader import FULL_MONTH_END, FULL_MONTH_START, filter_sales, load_sales, sales_kpis
+from services.data_loader import filter_sales, load_sales, partial_month_summary, sales_kpis
 
 setup_page("Sales", "💰")
 page_header("Phân tích doanh thu (mart_sales)",
@@ -60,13 +60,7 @@ fig = go.Figure(go.Scatter(
 fig.update_layout(yaxis_title=label, xaxis=dict(type="category", tickangle=-60),
                   yaxis=vn_axis_ticks(monthly[col]))
 st.plotly_chart(style_fig(fig, 340), **STRETCH)
-partial_months = sales_all.groupby("year_month")["order_id"].nunique().rename("orders").reset_index()
-partial_months = partial_months[
-    (partial_months["year_month"] < FULL_MONTH_START) | (partial_months["year_month"] > FULL_MONTH_END)
-]
-partial_summary = ", ".join(
-    f"{row.year_month} ({fmt_int(row.orders)} đơn)" for row in partial_months.itertuples(index=False)
-)
+partial_summary = partial_month_summary(sales_all)
 if partial_summary:
     st.caption(f"Các tháng ngoài giai đoạn đầy đủ trong dữ liệu: {partial_summary}; "
                "cân nhắc bộ lọc “Chỉ các tháng đầy đủ” khi so sánh xu hướng.")
