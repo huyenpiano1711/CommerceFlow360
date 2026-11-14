@@ -1,4 +1,4 @@
-"""Chạy thử (smoke test) 5 trang dashboard bằng streamlit.testing, không cần mở trình duyệt.
+"""Chạy thử (smoke test) 7 trang dashboard bằng streamlit.testing, không cần mở trình duyệt.
 
 Đọc data/exports/*.parquet có sẵn trong repo; bỏ qua nếu máy chưa cài streamlit/plotly.
 """
@@ -11,7 +11,8 @@ pytest.importorskip("plotly")
 from streamlit.testing.v1 import AppTest  # noqa: E402
 
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
-PAGES = ["Home.py", "pages/1_Sales.py", "pages/2_Delivery.py", "pages/3_Customer.py", "pages/4_Data_Quality.py"]
+PAGES = ["Home.py", "pages/1_Sales.py", "pages/2_Delivery.py", "pages/3_Customer.py", "pages/4_Data_Quality.py",
+         "pages/5_Data_Explorer.py", "pages/6_Pipeline.py"]
 
 
 @pytest.mark.parametrize("page", PAGES)
@@ -19,7 +20,8 @@ def test_page_renders_without_error(page: str) -> None:
     at = AppTest.from_file(str(APP_DIR / page), default_timeout=120).run()
     assert not at.exception, [e.value for e in at.exception]
     assert not at.error, [e.value for e in at.error]
-    assert len(at.metric) >= 4
+    # Thẻ KPI là khối HTML class "cf-kpi" (components/ui.py: kpi), không còn dùng st.metric
+    assert sum('class="cf-kpi"' in m.value for m in at.markdown) >= 3
 
 
 def test_category_filter_explains_delivery_scope() -> None:

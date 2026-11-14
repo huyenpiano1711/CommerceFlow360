@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from components.ui import (
+    kpi, section, download_csv, sidebar_brand, LIGHT,
     STRETCH,
     AMBER, BLUE, GREY, empty_guard, filter_summary, fmt_int, fmt_money, fmt_money_short, fmt_num,
     page_header, setup_page, sidebar_filters, style_fig, vn_axis_ticks,
@@ -30,20 +31,20 @@ k = sales_kpis(sales)
 excluded_orders = sales.loc[~sales["is_valid_sale"], "order_id"].nunique()
 
 c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric("Doanh thu", fmt_money_short(k["revenue"]))
-c2.metric("Số đơn hợp lệ", fmt_int(k["orders"]))
-c3.metric("Doanh thu danh mục / đơn" if filters.categories else "AOV",
+kpi(c1, "Doanh thu", fmt_money_short(k["revenue"]))
+kpi(c2, "Số đơn hợp lệ", fmt_int(k["orders"]))
+kpi(c3, "Doanh thu danh mục / đơn" if filters.categories else "AOV",
           fmt_money(k["aov"]),
           help=("Doanh thu của danh mục đã chọn trên mỗi đơn có sản phẩm thuộc danh mục đó."
                 if filters.categories else "Doanh thu / số đơn hợp lệ."))
-c4.metric("Số dòng hàng", fmt_int(k["items"]), help="Tổng item_count; đếm dòng sản phẩm, không phải số đơn.")
-c5.metric("Phí vận chuyển", fmt_money_short(k["freight"]), help="Không cộng vào doanh thu.")
+kpi(c4, "Số dòng hàng", fmt_int(k["items"]), help="Tổng item_count; đếm dòng sản phẩm, không phải số đơn.")
+kpi(c5, "Phí vận chuyển", fmt_money_short(k["freight"]), help="Không cộng vào doanh thu.")
 st.caption(f"Đã loại {fmt_int(excluded_orders)} đơn canceled/unavailable khỏi các KPI trên.")
 if filters.categories:
     st.caption("Khi lọc danh mục, chỉ số doanh thu/đơn không phải AOV của toàn bộ đơn hàng.")
 
 # ------------------------------------------------------------------ theo tháng
-st.subheader("Doanh thu theo tháng")
+section("Doanh thu theo tháng")
 monthly = (valid.groupby("year_month")
                 .agg(revenue=("revenue", "sum"), orders=("order_id", "nunique")).reset_index())
 monthly["aov"] = monthly["revenue"] / monthly["orders"]
@@ -68,7 +69,7 @@ if partial_summary:
 # ------------------------------------------------------------------ danh mục và bang
 left, right = st.columns(2)
 with left:
-    st.subheader("Top 10 danh mục theo doanh thu")
+    section("Top 10 danh mục theo doanh thu")
     cat = (valid.groupby("product_category")
                 .agg(revenue=("revenue", "sum"), orders=("order_id", "nunique"))
                 .sort_values("revenue", ascending=False).head(10).reset_index())
@@ -80,7 +81,7 @@ with left:
     fig.update_xaxes(**vn_axis_ticks(cat["revenue"]))
     st.plotly_chart(style_fig(fig, 400), **STRETCH)
 with right:
-    st.subheader("Top 10 bang khách hàng theo doanh thu")
+    section("Top 10 bang khách hàng theo doanh thu")
     st_rev = (valid.groupby("customer_state")
                    .agg(revenue=("revenue", "sum"), orders=("order_id", "nunique")).reset_index())
     st_rev["aov"] = st_rev["revenue"] / st_rev["orders"]
@@ -97,7 +98,7 @@ with right:
 st.caption("Số đơn theo danh mục/bang là số đơn riêng của từng nhóm; một đơn nhiều danh mục được tính ở mỗi danh mục nên không cộng các nhóm với nhau.")
 
 # ------------------------------------------------------------------ ngày lễ
-st.subheader("Giá trị đơn trung bình: ngày lễ Brazil và ngày thường")
+section("Giá trị đơn trung bình: ngày lễ Brazil và ngày thường")
 hol = (valid.groupby("is_holiday")
             .agg(revenue=("revenue", "sum"), orders=("order_id", "nunique")).reset_index())
 hol["aov"] = hol["revenue"] / hol["orders"]
@@ -128,3 +129,6 @@ with st.expander("Xem dữ liệu chi tiết theo tháng"):
     monthly_display["Số đơn"] = monthly_display["Số đơn"].map(fmt_int)
     monthly_display["AOV (R$)"] = monthly_display["AOV (R$)"].map(fmt_money)
     st.dataframe(monthly_display, hide_index=True, **STRETCH)
+
+section("Tải dữ liệu", "Các dòng hàng của đơn hợp lệ theo đúng bộ lọc đang chọn.", icon="download")
+download_csv(valid, "commerceflow_sales_dang_loc.csv", "Tải dòng doanh thu đang lọc (CSV)")

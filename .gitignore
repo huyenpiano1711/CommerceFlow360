@@ -48,3 +48,9 @@ data/exports/*.tmp
 build/
 dist/
 *.egg-info/
+
+# Bản gom file để tải lên Google Drive (không đưa lên GitHub)
+Drive_Upload/
+
+# File nén để nộp bài (không đưa lên GitHub)
+*.zip

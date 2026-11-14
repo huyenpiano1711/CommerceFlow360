@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from components.ui import (
+    kpi, section, download_csv, sidebar_brand, LIGHT,
     STRETCH,
     BLUE, GREEN, RED, empty_guard, filter_summary, fmt_int, fmt_num, fmt_pct, page_header,
     setup_page, sidebar_filters, style_fig, vn_axis_ticks,
@@ -32,15 +33,15 @@ dd = orders_dedup(delivery)
 not_eligible = len(dd) - len(el)
 
 c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric("Tỷ lệ giao trễ", fmt_pct(k["late_rate"]))
-c2.metric("Đơn giao trễ", fmt_int(k["late_orders"]), help="Trên tổng đơn đủ điều kiện: " + fmt_int(k["eligible_orders"]))
-c3.metric("Số ngày giao TB", fmt_num(k["avg_delivery_days"], 1))
-c4.metric("Số ngày trễ TB", fmt_num(k["avg_days_late"]), help="Trung bình days_late (không âm) trên đơn delivered đủ điều kiện, gồm cả đơn đúng hạn (0 ngày).")
-c5.metric("Điểm đánh giá TB", fmt_num(k["avg_review"]))
+kpi(c1, "Tỷ lệ giao trễ", fmt_pct(k["late_rate"]))
+kpi(c2, "Đơn giao trễ", fmt_int(k["late_orders"]), help="Trên tổng đơn đủ điều kiện: " + fmt_int(k["eligible_orders"]))
+kpi(c3, "Số ngày giao TB", fmt_num(k["avg_delivery_days"], 1))
+kpi(c4, "Số ngày trễ TB", fmt_num(k["avg_days_late"]), help="Trung bình days_late (không âm) trên đơn delivered đủ điều kiện, gồm cả đơn đúng hạn (0 ngày).")
+kpi(c5, "Điểm đánh giá TB", fmt_num(k["avg_review"]))
 st.caption(f"{fmt_int(not_eligible)} đơn chưa giao, đã hủy hoặc thiếu mốc thời gian được loại khỏi mẫu tính tỷ lệ (không xóa khỏi kho dữ liệu).")
 
 # ------------------------------------------------------------------ theo bang
-st.subheader("Tỷ lệ giao trễ theo bang khách hàng")
+section("Tỷ lệ giao trễ theo bang khách hàng")
 # Số đơn và tỷ lệ trễ cùng tính trên một tập: đơn delivered có đủ mốc thời gian (el), giống Bảng 4.3.1
 # và bảng người bán bên dưới; trước đây số đơn gồm cả đơn delivered thiếu ngày nhận nên lệch mẫu số.
 by_state = (el.groupby("customer_state")
@@ -68,7 +69,7 @@ st.caption("Khoảng cách địa lý tới trung tâm phân phối là giả th
 # ------------------------------------------------------------------ đánh giá và phân phối
 left, right = st.columns(2)
 with left:
-    st.subheader("Điểm đánh giá: đúng hạn vs giao trễ")
+    section("Điểm đánh giá: đúng hạn vs giao trễ")
     rated = el.dropna(subset=["review_score"]).copy()
     rated["nhom"] = rated["is_delivered_late"].map({True: "Giao trễ", False: "Đúng hạn"})
     rv = (rated.groupby("nhom").agg(orders=("order_id", "count"), avg_review=("review_score", lambda s: s.astype(float).mean()))
@@ -83,7 +84,7 @@ with left:
     st.plotly_chart(style_fig(fig, 360), **STRETCH)
     st.caption("So sánh nhóm, không khẳng định quan hệ nhân quả.")
 with right:
-    st.subheader("Phân phối số ngày giao hàng")
+    section("Phân phối số ngày giao hàng")
     cap = int(el["delivery_days"].astype(float).quantile(0.99))
     fig = px.histogram(el[el["delivery_days"].astype(float) <= cap].assign(d=lambda x: x["delivery_days"].astype(float)),
                        x="d", nbins=min(cap, 60), labels={"d": "Số ngày từ đặt đến nhận"})
@@ -94,7 +95,7 @@ with right:
     st.caption(f"Hiển thị đến ngày thứ {cap} (phân vị 99); các đơn giao lâu hơn vẫn nằm trong KPI nhưng không vẽ để tránh kéo dài trục.")
 
 # ------------------------------------------------------------------ theo tháng
-st.subheader("Tỷ lệ giao trễ theo tháng")
+section("Tỷ lệ giao trễ theo tháng")
 MIN_MONTH_ORDERS = 30
 by_month = (el.groupby("year_month")
               .agg(orders=("order_id", "count"), late_rate=("is_delivered_late", lambda s: s.astype(int).mean())).reset_index())
@@ -115,7 +116,7 @@ if not small_months.empty:
                + ". Các đơn này vẫn được tính trong KPI ở trên.")
 
 # ------------------------------------------------------------------ người bán
-st.subheader("Người bán có tỷ lệ giao trễ cao")
+section("Người bán có tỷ lệ giao trễ cao")
 min_orders = st.slider("Số đơn giao tối thiểu của người bán", 10, 200, 30, step=5,
                        help="Mặc định 30 đơn như báo cáo 4.3, để tránh nhiễu từ mẫu quá nhỏ.")
 # Grain (order_id, seller_id): một đơn nhiều người bán xuất hiện ở mỗi người bán của đơn đó
@@ -138,3 +139,6 @@ else:
     st.caption("Đơn có nhiều người bán được tính cho mỗi người bán tham gia đơn. Olist chỉ cho đánh giá theo đơn, "
                "nên điểm ĐG TB của người bán là điểm của các đơn họ tham gia: đơn nhiều người bán thì mọi người bán "
                "nhận chung một điểm, không phải điểm riêng cho từng người.")
+
+section("Tải dữ liệu", "Các đơn đã giao đủ điều kiện tính giao trễ, theo bộ lọc đang chọn.", icon="download")
+download_csv(el, "commerceflow_delivery_dang_loc.csv", "Tải đơn giao hàng đang lọc (CSV)")
