@@ -133,7 +133,7 @@ for column in ["Giá trị đo được", "Giá trị kỳ vọng", "Chênh lệ
     ]
 st.dataframe(recon_display, hide_index=True, **STRETCH)
 if (recon["Kết quả"] == "Lệch").any():
-    st.error("Có chỉ số lệch. Không sửa số cho khớp; kiểm tra lại pipeline theo AGENTS.md.")
+    st.error("Có chỉ số lệch. Không sửa số cho khớp; kiểm tra lại pipeline theo README.md (mục Hướng dẫn chi tiết).")
 else:
     st.success("Các phép đối soát tính trực tiếp từ Parquet đều khớp.")
 if ref is None:

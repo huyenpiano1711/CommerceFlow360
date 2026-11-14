@@ -1,0 +1,7 @@
+# Thư viện cho bản dashboard online (Streamlit Community Cloud). Pipeline đầy đủ dùng requirements.txt ở gốc.
+streamlit>=1.47,<2.0
+pandas>=2.2,<3.2
+numpy>=1.26,<3.0
+pyarrow>=17,<23
+plotly>=5.24,<7.0
+duckdb>=1.1,<2.0

@@ -20,7 +20,7 @@ dbt_project/
 
 ## Chạy nhanh
 
-Cách chính: `python scripts/export_parquet.py` từ thư mục gốc (dbt build toàn bộ, xem `AGENTS.md`).
+Cách chính: `python scripts/export_parquet.py` từ thư mục gốc (dbt build toàn bộ, xem README.md ở thư mục gốc).
 Theo từng tầng: notebook `03_Silver_Transformation`, `04_Gold_Data_Warehouse`, `05_Data_Quality`, `06_Business_Analytics`.
 
 Chạy tay (từ thư mục gốc repository, đã có `commerceflow.duckdb` chứa `bronze_*`):

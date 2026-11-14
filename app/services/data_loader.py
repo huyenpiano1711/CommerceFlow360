@@ -4,7 +4,7 @@ Dashboard CHỈ đọc 4 file Parquet trong data/exports/ do E05 xuất ra
 (mart_sales, mart_delivery, mart_customer, quality_results). Không nối lại CSV gốc,
 không mở commerceflow.duckdb. DuckDB chỉ được dùng như bộ đọc Parquet trong bộ nhớ.
 
-Quy tắc KPI bám theo AGENTS.md mục 9 (không tự định nghĩa lại):
+Quy tắc KPI bám theo README.md, mục "Quy tắc nghiệp vụ đã chốt" (không tự định nghĩa lại):
 - Đơn hợp lệ = mart_sales.is_valid_sale (loại canceled, unavailable).
 - Doanh thu = sum(revenue) trên đơn hợp lệ; freight_value là measure riêng.
 - Số đơn = nunique(order_id), không cộng số đơn giữa các nhóm.
