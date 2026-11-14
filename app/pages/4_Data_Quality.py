@@ -8,6 +8,7 @@ import plotly.express as px
 import streamlit as st
 
 from components.ui import (
+    kpi, section, download_csv, sidebar_brand, LIGHT,
     STRETCH, AMBER, GREEN, RED, fmt_int, fmt_money, fmt_num, page_header, setup_page, style_fig, vn_axis_ticks,
 )
 from services.data_loader import (
@@ -17,7 +18,8 @@ from services.data_loader import (
 setup_page("Data Quality", "✅")
 page_header("Chất lượng dữ liệu và đối soát",
             "Kết quả `dbt build` toàn bộ (Silver → Gold → Mart) và đối soát số liệu giữa các tầng, đọc từ Parquet.")
-st.sidebar.header("Bộ lọc")
+sidebar_brand()
+st.sidebar.markdown('<p class="cf-side-title">Bộ lọc</p>', unsafe_allow_html=True)
 st.sidebar.info("Trang này không áp dụng bộ lọc chung vì các kiểm thử chạy trên toàn bộ dữ liệu.")
 
 quality = load_quality().copy()
@@ -44,10 +46,10 @@ counts = quality["status"].value_counts()
 total = len(quality)
 bad = counts.get("fail", 0) + counts.get("error", 0)
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Tổng số test", fmt_int(total))
-c2.metric("Pass", fmt_int(counts.get("pass", 0)))
-c3.metric("Warn", fmt_int(counts.get("warn", 0)))
-c4.metric("Fail / Error", fmt_int(bad))
+kpi(c1, "Tổng số test", fmt_int(total))
+kpi(c2, "Pass", fmt_int(counts.get("pass", 0)))
+kpi(c3, "Warn", fmt_int(counts.get("warn", 0)))
+kpi(c4, "Fail / Error", fmt_int(bad))
 if bad == 0:
     st.success("Không có lỗi khóa, grain hay đối soát ở bất kỳ tầng nào. Các cảnh báo (warn) là bất thường có thật của dữ liệu nguồn, không phải lỗi xử lý.")
 else:
@@ -75,7 +77,7 @@ with right:
     st.plotly_chart(style_fig(fig, 320), **STRETCH)
 
 # ------------------------------------------------------------------ cảnh báo
-st.subheader("Các cảnh báo (warn) và ý nghĩa")
+section("Các cảnh báo (warn) và ý nghĩa")
 WARN_NOTES = {
     "test_silver_carrier_after_purchase": "Đơn có ngày bàn giao cho đơn vị vận chuyển sớm hơn thời điểm đặt hàng. Đã gắn cờ flag_carrier_before_purchase ở Silver; không tự sửa giá trị.",
     "test_silver_review_after_purchase": "Đánh giá có ngày tạo sớm hơn ngày đặt hàng. Giữ nguyên, ghi nhận như nhiễu nguồn.",
@@ -96,7 +98,7 @@ else:
 st.caption("Test ở mức warn ghi nhận số lượng bất thường mà không chặn pipeline vì đó là đặc điểm của dữ liệu nguồn, không phải lỗi xử lý.")
 
 # ------------------------------------------------------------------ đối soát giữa mart
-st.subheader("Đối soát số liệu giữa các Data Mart")
+section("Đối soát số liệu giữa các Data Mart")
 sales, delivery, customer = load_sales(), load_delivery(), load_customer()
 
 dup_sales = int(sales.duplicated(["order_id", "order_item_id"]).sum())
@@ -154,7 +156,7 @@ st.caption(f"mart_delivery chỉ gồm đơn có ít nhất 1 dòng hàng ({fmt_
            "fact_order_items, không so với tổng fact_orders.")
 
 # ------------------------------------------------------------------ danh sách test
-st.subheader("Danh sách toàn bộ test")
+section("Danh sách toàn bộ test")
 f1, f2, f3 = st.columns(3)
 status_sel = f1.multiselect("Trạng thái", sorted(quality["status"].unique()), default=sorted(quality["status"].unique()))
 layer_sel = f2.multiselect("Nhóm (suy từ tên test)", ["Silver", "Gold", "Mart"], default=["Silver", "Gold", "Mart"])
@@ -169,3 +171,6 @@ view_display["Thời gian (s)"] = view_display["Thời gian (s)"].map(lambda val
 st.dataframe(
     view_display, hide_index=True, **STRETCH, height=420)
 st.caption(f"Hiển thị {fmt_int(len(view))}/{fmt_int(total)} test. Nguồn: data/exports/quality_results.parquet (từ target/run_results.json của dbt).")
+
+section("Tải dữ liệu", "Kết quả 91 kiểm thử dbt.", icon="download")
+download_csv(quality, "commerceflow_quality_results.csv", "Tải kết quả kiểm thử (CSV)")

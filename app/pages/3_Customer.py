@@ -7,6 +7,7 @@ import plotly.express as px
 import streamlit as st
 
 from components.ui import (
+    kpi, section, download_csv, sidebar_brand, LIGHT,
     STRETCH,
     AMBER, BLUE, empty_guard, fmt_int, fmt_money, fmt_money_short, fmt_num, fmt_pct, fmt_pct_points, page_header,
     setup_page, style_fig, vn_axis_ticks,
@@ -17,7 +18,8 @@ setup_page("Customer", "👥")
 page_header("Phân tích khách hàng (mart_customer)",
             "Một dòng cho mỗi customer_unique_id; customer_id chỉ là mã theo từng đơn nên không dùng để đếm khách.")
 
-st.sidebar.header("Bộ lọc chung")
+sidebar_brand()
+st.sidebar.markdown('<p class="cf-side-title">Bộ lọc chung</p>', unsafe_allow_html=True)
 st.sidebar.info("Trang này không dùng bộ lọc thời gian, bang, danh mục: mart_customer đã tổng hợp theo khách hàng "
                 "trên toàn bộ dữ liệu nên không có các chiều đó.")
 
@@ -28,10 +30,10 @@ k = customer_kpis(customer)
 no_valid = len(customer) - len(valid)
 
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Khách hàng", fmt_int(k["customers"]), help="customer_unique_id có ít nhất 1 đơn hợp lệ.")
-c2.metric("Khách mua lại (≥ 2 đơn)", fmt_int(k["repeat_customers"]))
-c3.metric("Tỷ lệ mua lại", fmt_pct(k["repeat_rate"]))
-c4.metric("Tổng chi tiêu", fmt_money_short(k["total_spend"]),
+kpi(c1, "Khách hàng", fmt_int(k["customers"]), help="customer_unique_id có ít nhất 1 đơn hợp lệ.")
+kpi(c2, "Khách mua lại (≥ 2 đơn)", fmt_int(k["repeat_customers"]))
+kpi(c3, "Tỷ lệ mua lại", fmt_pct(k["repeat_rate"]))
+kpi(c4, "Tổng chi tiêu", fmt_money_short(k["total_spend"]),
           help="Tổng payment_value khách trả của đơn hợp lệ, gồm phí vận chuyển (khác doanh thu price ở trang Sales).")
 st.caption(f"{fmt_int(no_valid)} khách chỉ có đơn canceled/unavailable được giữ trong mart để đối soát nhưng loại khỏi các chỉ số dưới đây.")
 
@@ -40,7 +42,7 @@ st.caption(f"{fmt_int(no_valid)} khách chỉ có đơn canceled/unavailable đ�
 REPEAT_COLORS = {"Mua 1 lần": BLUE, "Mua lại (≥ 2 đơn)": AMBER}
 left, right = st.columns(2)
 with left:
-    st.subheader("Khách mua 1 lần vs mua lại")
+    section("Khách mua 1 lần vs mua lại")
     grp = (valid.assign(nhom=valid["is_repeat_customer"].map({True: "Mua lại (≥ 2 đơn)", False: "Mua 1 lần"}))
                 .groupby("nhom").agg(customers=("customer_unique_id", "count"), avg_spend=("total_spend", "mean")).reset_index())
     grp["pct"] = 100 * grp["customers"] / grp["customers"].sum()
@@ -57,7 +59,7 @@ with left:
     fig.update_yaxes(**vn_axis_ticks(grp["pct"], digits=1))
     st.plotly_chart(style_fig(fig, 360), **STRETCH)
 with right:
-    st.subheader("Chi tiêu trung bình mỗi khách (R$)")
+    section("Chi tiêu trung bình mỗi khách (R$)")
     fig = px.bar(grp, x="nhom", y="avg_spend", text=grp["avg_spend"].map(lambda v: fmt_num(v)),
                  labels={"avg_spend": "Chi tiêu TB (R$)", "nhom": ""})
     fig.update_traces(marker_color=grp["nhom"].map(REPEAT_COLORS).tolist(), textposition="outside")
@@ -66,7 +68,7 @@ with right:
 st.caption("Olist là marketplace đa ngành nên tỷ lệ mua lại thấp là đặc điểm của bộ dữ liệu; chênh lệch chi tiêu cho thấy giá trị tiềm năng của giữ chân khách.")
 
 # ------------------------------------------------------------------ phân khúc chi tiêu
-st.subheader("Phân khúc chi tiêu (quartile theo số khách)")
+section("Phân khúc chi tiêu (quartile theo số khách)")
 seg = spend_quartiles(valid)
 seg["customer_count_label"] = seg["customer_count"].map(fmt_int)
 seg["min_spend_label"] = seg["min_spend"].map(fmt_money_short)
@@ -94,7 +96,7 @@ st.dataframe(seg_display, hide_index=True, **STRETCH)
 st.caption("Chỉ gồm khách có tổng chi tiêu > 0. Thể hiện mức độ tập trung doanh thu, không phải dự báo giá trị khách hàng.")
 
 # ------------------------------------------------------------------ recency
-st.subheader("Thời gian từ lần mua gần nhất (recency)")
+section("Thời gian từ lần mua gần nhất (recency)")
 rec = recency_distribution(valid)
 rec["customer_count_label"] = rec["customer_count"].map(fmt_int)
 fig = px.bar(rec, x="nhom_recency", y="pct_customers", text=rec["pct_customers"].map(lambda v: fmt_pct_points(v)),
@@ -108,3 +110,6 @@ st.plotly_chart(style_fig(fig, 360), **STRETCH)
 snapshot = valid["last_order_date"].max()
 st.caption(f"Mốc so sánh là ngày đặt hàng lớn nhất trong dữ liệu ({snapshot:%d/%m/%Y}), không phải ngày hiện tại; "
            "đây không phải chỉ báo khách rời bỏ theo thời gian thực.")
+
+section("Tải dữ liệu", "Khách hàng có ít nhất một đơn hợp lệ (mart_customer).", icon="download")
+download_csv(valid, "commerceflow_customer.csv", "Tải danh sách khách hàng (CSV)")

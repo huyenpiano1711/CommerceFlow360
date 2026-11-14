@@ -2,20 +2,20 @@
 # Khóa base = "light" để giao diện giống nhau dù Windows/trình duyệt đang ở chế độ tối.
 [theme]
 base = "light"
-primaryColor = "#0f766e"
-backgroundColor = "#eef4f2"
+primaryColor = "#1f5eea"
+backgroundColor = "#f3f7ff"
 secondaryBackgroundColor = "#ffffff"
-textColor = "#17302f"
-borderColor = "#d5e3df"
-baseRadius = "0.6rem"
-chartCategoricalColors = ["#0f766e", "#d99b22", "#16845b", "#e76f51", "#64748b"]
+textColor = "#0f2350"
+borderColor = "#dfe8f8"
+baseRadius = "0.8rem"
+chartCategoricalColors = ["#1f5eea", "#f5a524", "#16a34a", "#ef5d4e", "#64748b"]
 
 [theme.sidebar]
-backgroundColor = "#0f3b39"
-secondaryBackgroundColor = "#17504d"
-textColor = "#e3f1ee"
-primaryColor = "#e9bd64"
-borderColor = "#2a625e"
+backgroundColor = "#0b2a6b"
+secondaryBackgroundColor = "#143a8a"
+textColor = "#e6efff"
+primaryColor = "#ffc857"
+borderColor = "#24468f"
 
 [browser]
 gatherUsageStats = false

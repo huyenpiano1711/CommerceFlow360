@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from components.ui import (
+    kpi, section, download_csv, sidebar_brand, LIGHT,
     STRETCH,
     BLUE, empty_guard, filter_summary, fmt_int, fmt_money, fmt_money_short, fmt_num, fmt_pct,
     page_header, setup_page, sidebar_filters, style_fig, vn_axis_ticks,
@@ -23,6 +24,15 @@ page_header(
     "Bronze → Silver → Gold → Data Mart → Dashboard.",
 )
 
+# --------------------------------------------------------------------- điều hướng nhanh
+nav = st.columns(6)
+for col, (page, label, icon) in zip(nav, [
+    ("pages/1_Sales.py", "Doanh thu", "💰"), ("pages/2_Delivery.py", "Giao hàng", "🚚"),
+    ("pages/3_Customer.py", "Khách hàng", "👥"), ("pages/4_Data_Quality.py", "Chất lượng", "✅"),
+    ("pages/5_Data_Explorer.py", "Khám phá", "🔎"), ("pages/6_Pipeline.py", "Pipeline", "🏗️"),
+]):
+    col.page_link(page, label=label, icon=icon, use_container_width=True)
+
 sales_all = load_sales()
 filters = sidebar_filters(use_category=True, use_state=True)
 
@@ -36,47 +46,47 @@ sk, dk, ck = sales_kpis(sales), delivery_kpis(delivery), customer_kpis(customer_
 st.caption(filter_summary(filters))
 
 # --------------------------------------------------------------------- KPI chính
-st.subheader("Kinh doanh")
+section("Kinh doanh")
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Doanh thu (đơn hợp lệ)", fmt_money_short(sk["revenue"]), help="Tổng price của dòng hàng thuộc đơn không bị canceled/unavailable. Không gồm phí vận chuyển.")
-c2.metric("Số đơn hợp lệ", fmt_int(sk["orders"]), help="count(distinct order_id) trên đơn hợp lệ.")
+kpi(c1, "Doanh thu (đơn hợp lệ)", fmt_money_short(sk["revenue"]), help="Tổng price của dòng hàng thuộc đơn không bị canceled/unavailable. Không gồm phí vận chuyển.")
+kpi(c2, "Số đơn hợp lệ", fmt_int(sk["orders"]), help="count(distinct order_id) trên đơn hợp lệ.")
 aov_label = "Doanh thu danh mục / đơn" if filters.categories else "Giá trị đơn trung bình (AOV)"
 aov_help = ("Doanh thu của danh mục đã chọn / số đơn có sản phẩm thuộc danh mục đó; không phải tổng giá trị toàn đơn."
             if filters.categories else "Doanh thu / số đơn hợp lệ.")
-c3.metric(aov_label, fmt_money(sk["aov"]), help=aov_help)
-c4.metric("Phí vận chuyển (đơn hợp lệ)", fmt_money_short(sk["freight"]), help="Measure riêng, không cộng vào doanh thu.")
+kpi(c3, aov_label, fmt_money(sk["aov"]), help=aov_help)
+kpi(c4, "Phí vận chuyển (đơn hợp lệ)", fmt_money_short(sk["freight"]), help="Measure riêng, không cộng vào doanh thu.")
 if filters.categories:
     st.caption("AOV đang phản ánh doanh thu của danh mục đã chọn trên mỗi đơn có sản phẩm thuộc danh mục đó.")
 
-st.subheader("Vận hành giao hàng")
+section("Vận hành giao hàng")
 d1, d2, d3, d4 = st.columns(4)
-d1.metric("Tỷ lệ giao trễ", fmt_pct(dk["late_rate"]), help="Số đơn delivered giao trễ / số đơn delivered có đủ mốc thời gian.")
-d2.metric("Số ngày giao TB", fmt_num(dk["avg_delivery_days"], 1), help="Từ ngày đặt đến ngày khách nhận, đơn delivered đủ điều kiện.")
-d3.metric("Điểm đánh giá TB", fmt_num(dk["avg_review"]), help="Đánh giá mới nhất của mỗi đơn (thang 1–5).")
-d4.metric("Đơn đủ điều kiện", fmt_int(dk["eligible_orders"]))
+kpi(d1, "Tỷ lệ giao trễ", fmt_pct(dk["late_rate"]), help="Số đơn delivered giao trễ / số đơn delivered có đủ mốc thời gian.")
+kpi(d2, "Số ngày giao TB", fmt_num(dk["avg_delivery_days"], 1), help="Từ ngày đặt đến ngày khách nhận, đơn delivered đủ điều kiện.")
+kpi(d3, "Điểm đánh giá TB", fmt_num(dk["avg_review"]), help="Đánh giá mới nhất của mỗi đơn (thang 1–5).")
+kpi(d4, "Đơn đủ điều kiện", fmt_int(dk["eligible_orders"]))
 if filters.categories:
     st.caption("Chỉ số giao hàng chỉ theo bộ lọc tháng và bang: mart_delivery không có chiều danh mục "
                "nên bộ lọc danh mục không áp dụng cho nhóm này.")
 
-st.subheader("Khách hàng (toàn bộ dữ liệu)")
+section("Khách hàng (toàn bộ dữ liệu)")
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("Khách hàng (customer_unique_id)", fmt_int(ck["customers"]), help="Khách có ít nhất 1 đơn hợp lệ.")
-k2.metric("Khách mua lại (≥ 2 đơn)", fmt_int(ck["repeat_customers"]))
-k3.metric("Tỷ lệ mua lại", fmt_pct(ck["repeat_rate"]))
+kpi(k1, "Khách hàng (customer_unique_id)", fmt_int(ck["customers"]), help="Khách có ít nhất 1 đơn hợp lệ.")
+kpi(k2, "Khách mua lại (≥ 2 đơn)", fmt_int(ck["repeat_customers"]))
+kpi(k3, "Tỷ lệ mua lại", fmt_pct(ck["repeat_rate"]))
 # Không để hai "R$" trong cùng giá trị: st.metric hiểu "$...$" là công thức LaTeX và hiện sai
-k4.metric("Chi tiêu TB (R$): mua lại vs 1 lần", f'{fmt_num(ck["avg_spend_repeat"])} vs {fmt_num(ck["avg_spend_single"])}',
+kpi(k4, "Chi tiêu TB (R$): mua lại vs 1 lần", f'{fmt_num(ck["avg_spend_repeat"])} vs {fmt_num(ck["avg_spend_single"])}',
           help="Tổng payment_value trung bình mỗi khách (R$), đơn hợp lệ.")
 st.caption("Chỉ số khách hàng tính theo customer_unique_id trên toàn bộ dữ liệu; mart_customer không có chiều bang/danh mục/tháng "
            "nên không chịu tác động của bộ lọc chung.")
 
 # --------------------------------------------------------------------- xu hướng
-st.subheader("Doanh thu và số đơn theo tháng")
+section("Doanh thu và số đơn theo tháng")
 valid = sales[sales["is_valid_sale"]]
 monthly = (valid.groupby("year_month")
                 .agg(revenue=("revenue", "sum"), orders=("order_id", "nunique")).reset_index())
 fig = go.Figure()
 fig.add_bar(
-    x=monthly["year_month"], y=monthly["orders"], name="Số đơn", marker_color="#b8d8d2", yaxis="y2",
+    x=monthly["year_month"], y=monthly["orders"], name="Số đơn", marker_color=LIGHT, yaxis="y2",
     customdata=monthly["orders"].map(fmt_int),
     hovertemplate="%{x}<br>Số đơn: %{customdata}<extra></extra>",
 )
@@ -101,13 +111,13 @@ if partial_summary:
                "Có thể bật/tắt “Chỉ các tháng đầy đủ” ở thanh bên để đưa chúng vào/loại khỏi biểu đồ.")
 
 # --------------------------------------------------------------------- tình trạng dữ liệu
-st.subheader("Tình trạng kiểm thử dữ liệu")
+section("Tình trạng kiểm thử dữ liệu")
 counts = quality["status"].value_counts()
 q1, q2, q3, q4 = st.columns(4)
-q1.metric("Tổng test dbt", fmt_int(len(quality)))
-q2.metric("Pass", fmt_int(counts.get("pass", 0)))
-q3.metric("Warn", fmt_int(counts.get("warn", 0)), help="Bất thường có thật của dữ liệu nguồn, đã gắn cờ ở Silver; không chặn pipeline.")
-q4.metric("Fail / Error", fmt_int(counts.get("fail", 0) + counts.get("error", 0)))
+kpi(q1, "Tổng test dbt", fmt_int(len(quality)))
+kpi(q2, "Pass", fmt_int(counts.get("pass", 0)))
+kpi(q3, "Warn", fmt_int(counts.get("warn", 0)), help="Bất thường có thật của dữ liệu nguồn, đã gắn cờ ở Silver; không chặn pipeline.")
+kpi(q4, "Fail / Error", fmt_int(counts.get("fail", 0) + counts.get("error", 0)))
 st.caption("Chi tiết ở trang Data Quality.")
 
 with st.expander("Định nghĩa KPI dùng trong dashboard"):
